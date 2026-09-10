@@ -1,0 +1,272 @@
+.gestion-categorias {
+  animation: fadeIn 0.3s ease;
+}
+
+.gestion-categorias h2 {
+  color: var(--dark);
+  margin-bottom: 30px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* Crear Categoría */
+.crear-categoria {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: var(--shadow);
+}
+
+.crear-categoria h3 {
+  color: var(--dark);
+  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.form-categoria {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.form-categoria .form-group {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.form-categoria .form-input {
+  padding: 12px;
+  font-size: 14px;
+}
+
+.form-categoria .btn {
+  height: 44px;
+  white-space: nowrap;
+}
+
+/* Lista de Categorías */
+.categorias-list {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: var(--shadow);
+}
+
+.categorias-list h3 {
+  color: var(--dark);
+  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.categorias-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.categoria-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  padding: 20px;
+  color: white;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.categoria-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.categoria-content {
+  flex: 1;
+}
+
+.categoria-content h4 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.categoria-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-edit,
+.btn-delete {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.btn-edit:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.btn-delete:hover {
+  background: #e74c3c;
+  border-color: #c0392b;
+}
+
+/* Edición inline */
+.edicion-content {
+  width: 100%;
+}
+
+.edicion-content .input-edicion {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid white;
+  border-radius: 5px;
+  font-size: 14px;
+  color: var(--dark);
+  margin-bottom: 10px;
+}
+
+.edicion-content .input-edicion:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+}
+
+.edicion-content .buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.edicion-content .btn-save,
+.edicion-content .btn-cancel {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.edicion-content .btn-save {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.edicion-content .btn-save:hover {
+  background: var(--success);
+  color: white;
+}
+
+.edicion-content .btn-cancel {
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
+}
+
+.edicion-content .btn-cancel:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.sin-categorias {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .gestion-categorias h2 {
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+
+  .crear-categoria,
+  .categorias-list {
+    padding: 20px;
+  }
+
+  .form-categoria {
+    grid-template-columns: 1fr;
+  }
+
+  .form-categoria .btn {
+    width: 100%;
+  }
+
+  .categorias-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .categoria-card {
+    padding: 15px;
+  }
+
+  .categoria-content h4 {
+    font-size: 16px;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .edicion-content .input-edicion {
+    padding: 8px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gestion-categorias h2 {
+    font-size: 18px;
+  }
+
+  .crear-categoria,
+  .categorias-list {
+    padding: 15px;
+  }
+
+  .categorias-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .categoria-card {
+    padding: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .categoria-content h4 {
+    font-size: 14px;
+  }
+
+  .categoria-actions {
+    margin-top: 8px;
+    width: 100%;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}

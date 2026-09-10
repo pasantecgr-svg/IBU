@@ -1,0 +1,73 @@
+node_modules/
+**/node_modules/
+.env
+.env.*
+dist/
+build/
+coverage/
+.DS_Store
+.vscode/
+.idea/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+frontend/dist/
+backend/node_modules/
+prisma/migrations/
+__pycache__/
+*.sqlite
+/.history
+/.sass-cache
+/.parcel-cache
+.env.local
+.env.production
+.env.development
+.secret
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Backend specific env
+backend/.env
+backend/.env.local
+
+# Node modules
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build output
+dist/
+build/
+frontend/dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Cache
+.cache/
+.eslintcache
+
+# Testing
+coverage/
+.nyc_output/

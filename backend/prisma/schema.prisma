@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model usuarios {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  password_hash String
+  nombre        String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+}
+
+model categorias {
+  id         String   @id @default(uuid()) @db.Uuid
+  nombre     String   @unique
+  created_at DateTime @default(now())
+  productos  productos[]
+}
+
+model productos {
+  id                  String    @id @default(uuid()) @db.Uuid
+  nombre              String
+  categoria_id        String    @db.Uuid
+  marca               String?
+  modelo              String?
+  numero_serie        String?
+  cantidad_total      Int
+  cantidad_disponible Int
+  ubicacion           String?
+  estado              String?
+  fecha_adquisicion   DateTime? @db.Date
+  foto_url            String?
+  descripcion         String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  categorias categorias @relation(fields: [categoria_id], references: [id])
+  archivos  archivos[]
+}
+
+model archivos {
+  id               String   @id @default(uuid()) @db.Uuid
+  producto_id      String   @db.Uuid
+  nombre           String
+  mime_type        String
+  drive_file_id    String?
+  web_view_link    String?
+  web_content_link String?
+  uploaded_at      DateTime @default(now())
+
+  productos productos @relation(fields: [producto_id], references: [id])
+}

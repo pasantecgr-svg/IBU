@@ -1,0 +1,116 @@
+🚀 INSTRUCCIONES RÁPIDAS DE INICIO
+
+═══════════════════════════════════════════════════════════
+
+PASO 1: Crear las tablas en la base de datos local
+─────────────────────────────────────
+
+1. Si usas Docker Compose: al levantar los servicios, Postgres aplicará automáticamente `db/init.sql` y creará las tablas.
+2. Si no usas Docker: ejecuta el SQL contenido en `db/init.sql` en tu instancia de Postgres local.
+
+✅ Deberías ver un mensaje de éxito al ejecutar el script SQL
+
+
+PASO 2: Configurar el archivo .env
+──────────────────────────────────
+
+1. Abre: backend/.env
+2. Reemplaza SOLO estos valores con los tuyos en `backend/.env` o, mejor, en `backend/.env.local` (archivo gitignored):
+   
+  DATABASE_URL=postgresql://usuario:password@host:5432/inventario
+  GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+  GOOGLE_CLIENT_SECRET=your-google-client-secret
+  GOOGLE_DRIVE_FOLDER_ID=your-drive-folder-id
+
+3. Guarda
+
+
+PASO 3: Instalar dependencias
+─────────────────────────────
+
+En la terminal, en la carpeta raíz (inventario-bodega/):
+
+npm install:all
+
+Esto instalará dependencias para backend Y frontend
+
+
+PASO 4: Iniciar los servidores
+──────────────────────────────
+
+Opción A (Recomendado): Un solo comando
+npm run dev
+
+Opción B (Dos terminales):
+
+Terminal 1 (Backend):
+  cd backend
+  npm run dev
+
+Terminal 2 (Frontend):
+  cd frontend
+  npm run dev
+
+
+PASO 5: Acceder a la aplicación
+───────────────────────────────
+
+Abre tu navegador:
+  http://localhost:5173
+
+✅ ¡Listo! Ya tienes la app funcionando
+
+
+═══════════════════════════════════════════════════════════
+
+🎯 PRIMEROS PASOS EN LA APP
+
+1. Ve a "Categorías" y verifica que estén cargadas
+   (Si no aparecen, el SQL no se ejecutó correctamente)
+
+2. Ve a "Nuevo Producto" y crea tu primer equipo
+
+3. Sube una foto (se guardará en Google Drive)
+
+4. Ve a "Productos" para ver tu lista
+
+5. Usa "Dashboard" para ver estadísticas
+
+6. Prueba descargar PDF y Excel
+
+
+═══════════════════════════════════════════════════════════
+
+⚠️ SI ALGO NO FUNCIONA
+
+Error: "Error conectando a la base de datos"
+→ Verifica que `DATABASE_URL` esté configurado correctamente
+→ Reinicia los servidores
+
+Error: "Error subiendo foto"
+→ Verifica GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_DRIVE_FOLDER_ID
+→ Confirma que Google Drive API esté habilitado
+
+Error: "No aparecen categorías"
+→ El SQL no se ejecutó
+→ Verifica que `db/init.sql` se haya aplicado en la base de datos (o ejecútalo manualmente)
+
+Puerto 3000 en uso:
+→ Cambia en backend/.env: PORT=3001
+→ Reinicia
+
+
+═══════════════════════════════════════════════════════════
+
+💡 TIPS ÚTILES
+
+• Los botones + / - en la tabla de productos actualizan cantidad disponible
+• Puedes editar directamente haciendo clic en "✏️"
+• Los reportes PDF/Excel incluyen toda la información
+• Google Drive guarda un historial de todas las fotos
+• Las categorías vienen predefinidas pero puedes agregar más
+
+
+═══════════════════════════════════════════════════════════
+
+¡Éxito con tu sistema de inventario! 🎉

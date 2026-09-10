@@ -1,0 +1,22 @@
+{
+  "name": "inventario-bodega",
+  "version": "1.0.0",
+  "description": "Sistema de inventario de bodega con Express, React y Google Drive",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "backend:dev": "cd backend && npm run dev",
+    "frontend:dev": "cd frontend && npm run dev",
+    "backend:install": "cd backend && npm install",
+    "frontend:install": "cd frontend && npm install",
+    "install:all": "npm install && npm run backend:install && npm run frontend:install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "prisma": "^5.22.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "all": "^0.0.0"
+  }
+}

@@ -6,10 +6,11 @@ RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists
 
 COPY backend/package*.json ./
 
-RUN npm ci
+# Use npm install to respect package.json when lockfile is out of sync
+RUN npm install --production
 
 COPY backend/ ./
-COPY prisma/ ./prisma/
+COPY backend/prisma/ ./prisma/
 
 RUN npx prisma generate
 

@@ -147,10 +147,10 @@ export const crearProducto = async (req, res) => {
         cantidad_disponible: cantidadTotalNum,
         ubicacion: ubicacion || 'Almacén',
         estado: estado || 'nuevo',
-        stock_estado: calcularStockEstado(cantidadTotalNum),
         fecha_adquisicion: fecha_adquisicion ? new Date(fecha_adquisicion) : new Date(),
         foto_url: foto_url || null,
-        descripcion: descripcion || null,
+            descripcion: descripcion || null,
+            activo_fijo: req.body.activo_fijo || null,
         created_at: new Date(),
         updated_at: new Date()
       }
@@ -194,6 +194,7 @@ export const actualizarProducto = async (req, res) => {
       'estado',
       'fecha_adquisicion',
       'foto_url',
+      'activo_fijo',
       'descripcion'
     ];
 
@@ -212,9 +213,7 @@ export const actualizarProducto = async (req, res) => {
       }
     }
 
-    if (updates.cantidad_disponible !== undefined) {
-      updates.stock_estado = calcularStockEstado(updates.cantidad_disponible);
-    }
+    // Do not persist `stock_estado` to avoid schema mismatch; compute it in responses
 
     const producto = await prisma.productos.update({ where: { id }, data: updates });
     if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
@@ -226,6 +225,7 @@ export const actualizarProducto = async (req, res) => {
       message: 'Producto actualizado exitosamente',
       producto: {
         ...producto,
+        stock_estado: calcularStockEstado(producto.cantidad_disponible),
         ...(alerta || { stock_bajo: false, alerta_stock: null })
       }
     });
@@ -279,7 +279,6 @@ export const actualizarCantidadDisponible = async (req, res) => {
       where: { id },
       data: {
         cantidad_disponible,
-        stock_estado: calcularStockEstado(cantidad_disponible),
         updated_at: new Date()
       }
     });

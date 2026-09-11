@@ -4,6 +4,8 @@ import Dashboard from './pages/Dashboard';
 import ListaProductos from './pages/ListaProductos';
 import FormularioProducto from './pages/FormularioProducto';
 import GestionCategorias from './pages/GestionCategorias';
+import OrdenesTrabajo from './pages/OrdenesTrabajo';
+import AdminUsuarios from './pages/AdminUsuarios';
 import { authAPI } from './utils/api';
 import { setSession, clearSession, setTheme } from './store/authSlice';
 import './styles/app.css';
@@ -32,21 +34,22 @@ export default function App() {
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [errorLogin, setErrorLogin] = useState('');
   const [loadingAuth, setLoadingAuth] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [passwordMessage, setPasswordMessage] = useState('');
+  
 
   const navegarA = (nuevaPagina, producto = null) => {
-    setPagina(nuevaPagina);
+    // prevenir navegación a páginas de ADMIN si no es ADMIN
+    const isAdmin = (usuario && usuario.role === 'ADMIN');
+    const adminOnlyPages = ['dashboard', 'productos', 'nuevo', 'ordenes'];
+    if (!isAdmin && adminOnlyPages.includes(nuevaPagina)) {
+      setPagina('acceso_denegado');
+      return;
+    }
     if (producto) {
       setProductoSeleccionado(producto);
     } else {
       setProductoSeleccionado(null);
     }
+    setPagina(nuevaPagina);
   };
 
   useEffect(() => {
@@ -130,39 +133,7 @@ export default function App() {
     document.body.appendChild(script);
   }, [dispatch]);
 
-  const cambiarPassword = async (event) => {
-    event.preventDefault();
-    setPasswordMessage('');
-
-    if (!passwordForm.currentPassword || !passwordForm.newPassword) {
-      setPasswordMessage('Debes completar todos los campos');
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      setPasswordMessage('La nueva contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordMessage('La nueva contraseña y la confirmación no coinciden');
-      return;
-    }
-
-    try {
-      await authAPI.cambiarPassword({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword
-      });
-
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setShowPasswordModal(false);
-      setPasswordMessage('');
-      alert('Contraseña actualizada correctamente');
-    } catch (error) {
-      setPasswordMessage(error?.response?.data?.error || 'No se pudo actualizar la contraseña');
-    }
-  };
+  
 
   const iniciarGoogle = () => {
     const clientId = getGoogleClientId();
@@ -218,35 +189,53 @@ export default function App() {
           </div>
 
           <ul className="nav-menu">
-            <li>
-              <button className={`nav-link ${pagina === 'dashboard' ? 'active' : ''}`} onClick={() => navegarA('dashboard')}>
-                📊 Dashboard
-              </button>
-            </li>
-            <li>
-              <button className={`nav-link ${pagina === 'productos' ? 'active' : ''}`} onClick={() => navegarA('productos')}>
-                📋 Productos
-              </button>
-            </li>
-            <li>
-              <button className={`nav-link ${pagina === 'nuevo' ? 'active' : ''}`} onClick={() => navegarA('nuevo')}>
-                ➕ Nuevo Producto
-              </button>
-            </li>
-            <li>
-              <button className={`nav-link ${pagina === 'categorias' ? 'active' : ''}`} onClick={() => navegarA('categorias')}>
-                🏷️ Categorías
-              </button>
-            </li>
+            {usuario && usuario.role === 'ADMIN' ? (
+              <>
+                <li>
+                  <button className={`nav-link ${pagina === 'dashboard' ? 'active' : ''}`} onClick={() => navegarA('dashboard')}>
+                    📊 Dashboard
+                  </button>
+                </li>
+                <li>
+                  <button className={`nav-link ${pagina === 'productos' ? 'active' : ''}`} onClick={() => navegarA('productos')}>
+                    📋 Productos
+                  </button>
+                </li>
+                <li>
+                  <button className={`nav-link ${pagina === 'nuevo' ? 'active' : ''}`} onClick={() => navegarA('nuevo')}>
+                    ➕ Nuevo Producto
+                  </button>
+                </li>
+                <li>
+                  <button className={`nav-link ${pagina === 'categorias' ? 'active' : ''}`} onClick={() => navegarA('categorias')}>
+                    🏷️ Categorías
+                  </button>
+                </li>
+                <li>
+                  <button className={`nav-link ${pagina === 'ordenes' ? 'active' : ''}`} onClick={() => navegarA('ordenes')}>
+                    🧾 Órdenes de Trabajo
+                  </button>
+                </li>
+                <li>
+                  <button className={`nav-link ${pagina === 'usuarios' ? 'active' : ''}`} onClick={() => navegarA('usuarios')}>
+                    👥 Usuarios
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <button className={`nav-link ${pagina === 'categorias' ? 'active' : ''}`} onClick={() => navegarA('categorias')}>
+                    🏷️ Categorías
+                  </button>
+                </li>
+              </>
+            )}
           </ul>
 
           <div className="nav-actions">
-            <span className="user-email">{usuario.email}</span>
             <button className="theme-toggle" onClick={toggleTheme} title="Alternar modo día/noche">
               {theme === 'light' ? '🌙' : '☀️'}
-            </button>
-            <button className="btn btn-secondary btn-small" onClick={() => setShowPasswordModal(true)}>
-              Cambiar contraseña
             </button>
             <button className="logout-btn" onClick={cerrarSesion}>Cerrar sesión</button>
           </div>
@@ -263,52 +252,17 @@ export default function App() {
           />
         )}
         {pagina === 'categorias' && <GestionCategorias />}
+        {pagina === 'ordenes' && <OrdenesTrabajo />}
+        {pagina === 'usuarios' && <AdminUsuarios />}
+        {pagina === 'acceso_denegado' && (
+          <div style={{ padding: 24 }}>
+            <h3>Acceso denegado</h3>
+            <p>No tienes permisos para ver esta sección. Contacta con un administrador.</p>
+          </div>
+        )}
       </main>
 
-      {showPasswordModal && (
-        <div className="password-modal-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="password-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Cambiar contraseña</h3>
-            <form onSubmit={cambiarPassword} className="password-form">
-              <label>
-                Contraseña actual
-                <input
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                />
-              </label>
-              <label>
-                Nueva contraseña
-                <input
-                  type="password"
-                  value={passwordForm.newPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                />
-              </label>
-              <label>
-                Confirmar nueva contraseña
-                <input
-                  type="password"
-                  value={passwordForm.confirmPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                />
-              </label>
-
-              {passwordMessage && <div className="login-error">{passwordMessage}</div>}
-
-              <div className="password-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowPasswordModal(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Guardar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      
 
       <footer className="footer">
         <p>© 2024 IBU Inventario de Bodega Unibague - v1.0</p>

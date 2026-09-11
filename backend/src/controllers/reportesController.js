@@ -1,6 +1,7 @@
 import prisma from '../utils/dbClient.js';
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
+import { Parser as Json2csvParser } from 'json2csv';
 
 // Generar reporte PDF
 export const generarReportePDF = async (req, res) => {
@@ -173,6 +174,9 @@ export const obtenerEstadisticas = async (req, res) => {
         nombre: true,
         cantidad_total: true,
         cantidad_disponible: true,
+        metraje_total: true,
+        metraje_restante: true,
+        unidad: true,
         categorias: { select: { id: true, nombre: true } }
       }
     });
@@ -182,9 +186,14 @@ export const obtenerEstadisticas = async (req, res) => {
 
     // Calcular estadísticas
     const totalEquipos = productos?.length || 0;
-    const totalCantidad = productos?.reduce((sum, p) => sum + p.cantidad_total, 0) || 0;
-    const totalDisponible = productos?.reduce((sum, p) => sum + p.cantidad_disponible, 0) || 0;
+    const totalCantidad = productos?.reduce((sum, p) => sum + (p.cantidad_total || 0), 0) || 0;
+    const totalDisponible = productos?.reduce((sum, p) => sum + (p.cantidad_disponible || 0), 0) || 0;
     const totalUtilizado = totalCantidad - totalDisponible;
+
+    // Metraje totals
+    const totalMetraje = productos?.reduce((sum, p) => sum + (p.metraje_total || 0), 0) || 0;
+    const totalMetrajeRestante = productos?.reduce((sum, p) => sum + (p.metraje_restante || 0), 0) || 0;
+    const totalMetrajeUtilizado = totalMetraje - totalMetrajeRestante;
 
     const estadisticasPorCategoria = {};
     porCategoria?.forEach((item) => {
@@ -207,6 +216,25 @@ export const obtenerEstadisticas = async (req, res) => {
         categoria: producto.categorias?.nombre || 'Sin categoría'
       }));
 
+    // Metraje bajo: criterio por defecto <=10 metros o <=10% restante
+    const metrajeBajo = productos
+      .filter((producto) => typeof producto.metraje_restante === 'number' && producto.metraje_restante > 0)
+      .filter((producto) => {
+        const restante = producto.metraje_restante || 0;
+        const total = producto.metraje_total || 0;
+        const porcentaje = total > 0 ? (restante / total) * 100 : 100;
+        return restante <= 10 || porcentaje <= 10;
+      })
+      .map((producto) => ({
+        id: producto.id,
+        nombre: producto.nombre,
+        metraje_restante: producto.metraje_restante || 0,
+        metraje_total: producto.metraje_total || 0,
+        unidad: producto.unidad || '',
+        porcentaje_restante: producto.metraje_total ? Number(((producto.metraje_restante / producto.metraje_total) * 100).toFixed(2)) : 0,
+        categoria: producto.categorias?.nombre || 'Sin categoría'
+      }));
+
     res.json({
       success: true,
       estadisticas: {
@@ -216,7 +244,12 @@ export const obtenerEstadisticas = async (req, res) => {
         totalUtilizado,
         porcentajeDisponible: totalCantidad > 0 ? ((totalDisponible / totalCantidad) * 100).toFixed(2) : 0,
         porCategoria: estadisticasPorCategoria,
-        stockBajo
+        stockBajo,
+        totalMetraje,
+        totalMetrajeRestante,
+        totalMetrajeUtilizado,
+        porcentajeMetrajeDisponible: totalMetraje > 0 ? ((totalMetrajeRestante / totalMetraje) * 100).toFixed(2) : 0,
+        metrajeBajo
       }
     });
   } catch (error) {
@@ -224,5 +257,104 @@ export const obtenerEstadisticas = async (req, res) => {
       success: false,
       error: error.message
     });
+  }
+};
+
+// Exportar órdenes de trabajo a Excel
+export const exportOrdenesExcel = async (req, res) => {
+  try {
+    const ordenes = await prisma.ordenes_trabajo.findMany({
+      include: { items: { include: { productos: true } }, usuario: true },
+      orderBy: { created_at: 'desc' }
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('OrdenesTrabajo');
+
+    sheet.columns = [
+      { header: 'OT ID', key: 'id', width: 20 },
+      { header: 'Título', key: 'titulo', width: 30 },
+      { header: 'Descripción', key: 'descripcion', width: 40 },
+      { header: 'Mantis Ticket', key: 'mantis_ticket', width: 20 },
+      { header: 'Usuario', key: 'usuario', width: 25 },
+      { header: 'Fecha', key: 'created_at', width: 22 },
+      { header: 'Producto', key: 'producto', width: 30 },
+      { header: 'Cantidad', key: 'cantidad', width: 12 },
+      { header: 'Metraje usado', key: 'metraje_usado', width: 12 },
+      { header: 'Cable', key: 'cable_descripcion', width: 30 }
+    ];
+
+    ordenes.forEach((orden) => {
+      if (!orden.items || orden.items.length === 0) {
+        sheet.addRow({ id: orden.id, titulo: orden.titulo, descripcion: orden.descripcion, mantis_ticket: orden.mantis_ticket, usuario: orden.usuario?.email || '', created_at: orden.created_at });
+      } else {
+        orden.items.forEach((it) => {
+          sheet.addRow({
+            id: orden.id,
+            titulo: orden.titulo,
+            descripcion: orden.descripcion,
+            mantis_ticket: orden.mantis_ticket,
+            usuario: orden.usuario?.email || '',
+            created_at: orden.created_at,
+            producto: it.productos?.nombre || '',
+            cantidad: it.cantidad || 0,
+            metraje_usado: it.metraje_usado || 0,
+            cable_descripcion: it.cable_descripcion || ''
+          });
+        });
+      }
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="ordenes_trabajo_${new Date().toISOString().split('T')[0]}.xlsx"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error exportOrdenesExcel:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Exportar órdenes de trabajo a CSV
+export const exportOrdenesCSV = async (req, res) => {
+  try {
+    const ordenes = await prisma.ordenes_trabajo.findMany({
+      include: { items: { include: { productos: true } }, usuario: true },
+      orderBy: { created_at: 'desc' }
+    });
+
+    const rows = [];
+    ordenes.forEach((orden) => {
+      if (!orden.items || orden.items.length === 0) {
+        rows.push({ id: orden.id, titulo: orden.titulo, descripcion: orden.descripcion, mantis_ticket: orden.mantis_ticket, usuario: orden.usuario?.email || '', created_at: orden.created_at });
+      } else {
+        orden.items.forEach((it) => {
+          rows.push({
+            id: orden.id,
+            titulo: orden.titulo,
+            descripcion: orden.descripcion,
+            mantis_ticket: orden.mantis_ticket,
+            usuario: orden.usuario?.email || '',
+            created_at: orden.created_at,
+            producto: it.productos?.nombre || '',
+            cantidad: it.cantidad || 0,
+            metraje_usado: it.metraje_usado || 0,
+            cable_descripcion: it.cable_descripcion || ''
+          });
+        });
+      }
+    });
+
+    const fields = ['id', 'titulo', 'descripcion', 'mantis_ticket', 'usuario', 'created_at', 'producto', 'cantidad', 'metraje_usado', 'cable_descripcion'];
+    const parser = new Json2csvParser({ fields });
+    const csv = parser.parse(rows);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="ordenes_trabajo_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exportOrdenesCSV:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };

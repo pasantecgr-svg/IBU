@@ -49,3 +49,21 @@ export const requireRole = (roles = []) => async (req, res, next) => {
 
   return res.status(403).json({ success: false, error: 'No tienes permisos suficientes' });
 };
+
+export const requireEmailSender = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: 'No autenticado' });
+  }
+
+  const EMAIL_SENDERS = (process.env.EMAIL_SENDERS || 'IBU@unibague.edu.co')
+    .split(',')
+    .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
+    .filter(Boolean);
+
+  const userEmail = (req.user.email || '').toString().trim().toLowerCase();
+  if (!EMAIL_SENDERS.includes(userEmail)) {
+    return res.status(403).json({ success: false, error: 'No tienes permiso para enviar correos' });
+  }
+
+  return next();
+};

@@ -59,7 +59,7 @@
 .select-categoria:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  box-shadow: 0 0 0 3px rgba(0,61,124,0.12);
 }
 
 /* Tabla */
@@ -96,7 +96,7 @@
 }
 
 .tabla-productos thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-gradient);
   color: white;
 }
 
@@ -188,7 +188,7 @@
 }
 
 .btn-accion.edit:hover {
-  color: #3498db;
+  color: var(--primary);
 }
 
 .btn-accion.delete:hover {

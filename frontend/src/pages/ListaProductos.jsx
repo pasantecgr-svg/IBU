@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { productosAPI, categoriasAPI } from '../utils/api';
 import '../styles/lista-productos.css';
 
@@ -12,6 +13,8 @@ const obtenerProductosBajos = (lista) => {
 };
 
 export default function ListaProductos({ onEditar }) {
+  const usuario = useSelector((state) => state.auth.user);
+  const isAdmin = usuario && usuario.role === 'ADMIN';
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -181,8 +184,9 @@ export default function ListaProductos({ onEditar }) {
               <th>Total</th>
               <th>Disponible</th>
               <th>Ubicación</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+                <th>Estado</th>
+                <th>Activo Fijo</th>
+                {isAdmin && <th>Acciones</th>}
             </tr>
           </thead>
           <tbody>
@@ -245,6 +249,15 @@ export default function ListaProductos({ onEditar }) {
                           <option value="reparacion">Reparación</option>
                         </select>
                       </td>
+                      <td>
+                        <input
+                          type="text"
+                          value={edicion.activo_fijo || ''}
+                          onChange={(e) => setEdicion({ ...edicion, activo_fijo: e.target.value })}
+                          className="input-edicion"
+                          placeholder="Activo Fijo"
+                        />
+                      </td>
                       <td className="acciones-edicion">
                         <button
                           className="btn-guardar"
@@ -275,21 +288,29 @@ export default function ListaProductos({ onEditar }) {
                       <td className="cantidad-total">{producto.cantidad_total}</td>
                       <td>
                         <div className="cantidad-disponible">
-                          <button
-                            onClick={() => handleCambiarCantidad(producto.id, Math.max(0, producto.cantidad_disponible - 1))}
-                            className="btn-cantidad"
-                          >
-                            −
-                          </button>
-                          <span className={producto.cantidad_disponible === 0 ? 'sin-stock' : ''}>
-                            {producto.cantidad_disponible}
-                          </span>
-                          <button
-                            onClick={() => handleCambiarCantidad(producto.id, Math.min(producto.cantidad_total, producto.cantidad_disponible + 1))}
-                            className="btn-cantidad"
-                          >
-                            +
-                          </button>
+                          {isAdmin ? (
+                            <>
+                              <button
+                                onClick={() => handleCambiarCantidad(producto.id, Math.max(0, producto.cantidad_disponible - 1))}
+                                className="btn-cantidad"
+                              >
+                                −
+                              </button>
+                              <span className={producto.cantidad_disponible === 0 ? 'sin-stock' : ''}>
+                                {producto.cantidad_disponible}
+                              </span>
+                              <button
+                                onClick={() => handleCambiarCantidad(producto.id, Math.min(producto.cantidad_total, producto.cantidad_disponible + 1))}
+                                className="btn-cantidad"
+                              >
+                                +
+                              </button>
+                            </>
+                          ) : (
+                            <span className={producto.cantidad_disponible === 0 ? 'sin-stock' : ''}>
+                              {producto.cantidad_disponible}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td>{producto.ubicacion || 'Almacén'}</td>
@@ -298,29 +319,38 @@ export default function ListaProductos({ onEditar }) {
                           {producto.estado}
                         </span>
                       </td>
-                      <td className="acciones">
-                        <button
-                          className="btn-accion edit"
-                          onClick={() => handleEditarClick(producto)}
-                          title="Editar"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          className="btn-accion delete"
-                          onClick={() => handleEliminar(producto.id)}
-                          title="Eliminar"
-                        >
-                          🗑️
-                        </button>
+                      <td>
+                        {producto.activo_fijo ? (
+                          <span>{producto.activo_fijo}</span>
+                        ) : (
+                          <span className="muted">-</span>
+                        )}
                       </td>
+                      {isAdmin && (
+                        <td className="acciones">
+                          <button
+                            className="btn-accion edit"
+                            onClick={() => handleEditarClick(producto)}
+                            title="Editar"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="btn-accion delete"
+                            onClick={() => handleEliminar(producto.id)}
+                            title="Eliminar"
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      )}
                     </>
                   )}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="sin-resultados">
+                <td colSpan={isAdmin ? 9 : 8} className="sin-resultados">
                   No hay productos que mostrar
                 </td>
               </tr>

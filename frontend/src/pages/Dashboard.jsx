@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { reportesAPI } from '../utils/api';
 import '../styles/dashboard.css';
 
 export default function Dashboard() {
+  const usuario = useSelector((state) => state.auth.user);
+  const isAdmin = usuario && usuario.role === 'ADMIN';
+
+  if (!isAdmin) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h3>Acceso denegado</h3>
+        <p>No tienes permisos para ver el dashboard. Contacta con un administrador.</p>
+      </div>
+    );
+  }
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -116,6 +128,15 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <div className="stat-card info">
+          <div className="stat-icon">🧵</div>
+          <div className="stat-content">
+            <h3>Metraje restante</h3>
+            <p className="stat-number">{stats?.totalMetrajeRestante ?? 0} {stats?.metrajeUnidad || ''}</p>
+            <small>{stats?.porcentajeMetrajeDisponible}% disponible</small>
+          </div>
+        </div>
+
         <div className="stat-card warning">
           <div className="stat-icon">⚠️</div>
           <div className="stat-content">
@@ -136,6 +157,23 @@ export default function Dashboard() {
                   <small>{producto.categoria}</small>
                 </div>
                 <span>{producto.cantidad_disponible} unidades</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {stats?.metrajeBajo && stats.metrajeBajo.length > 0 && (
+        <section className="stats-section alert-section">
+          <h3>⚠️ Productos con metraje bajo</h3>
+          <div className="stock-alert-list">
+            {stats.metrajeBajo.map((p) => (
+              <div key={p.id} className="stock-alert-item">
+                <div>
+                  <strong>{p.nombre}</strong>
+                  <small>{p.categoria}</small>
+                </div>
+                <span>{p.metraje_restante} {p.unidad} ({p.porcentaje_restante}%)</span>
               </div>
             ))}
           </div>

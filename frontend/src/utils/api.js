@@ -95,4 +95,17 @@ export const reportesAPI = {
   obtenerEstadisticas: () => api.get('/reportes/estadisticas')
 };
 
+// ORDENES DE TRABAJO
+export const ordenesAPI = {
+  crear: (data) => api.post('/ordenes', data),
+  obtener: () => api.get('/ordenes'),
+  obtenerPorId: (id) => api.get(`/ordenes/${id}`)
+};
+
+// USUARIOS (ADMIN)
+export const usuariosAPI = {
+  listar: () => api.get('/usuarios'),
+  actualizarRol: (id, role) => api.put(`/usuarios/${id}/role`, { role })
+};
+
 export default api;

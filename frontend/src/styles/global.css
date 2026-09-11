@@ -5,16 +5,36 @@
 }
 
 :root {
-  --primary: #3498db;
-  --success: #27ae60;
-  --danger: #e74c3c;
-  --warning: #f39c12;
+  /* Paleta solicitada por el usuario */
+  --rosado: #F26DCF;
+  --azul-unibague: #003D7C;
+  --verde: #90A641;
+  --rojo: #D91604;
+  --naranja: #DC6430;
+  --amarillo: #E3BC05;
+  --azul-claro: #3485D4;
+  --amarillo-quemado: #F2A20C;
+  --morado: #6D4D8C;
+  --verde-oliva: #6DBF49;
+  --azul-marina: #04BFBF;
+  --blanco: #FFFFFF;
+  --gris-texto: #333333;
+  --gris-fondo: #F5F6F8;
+
+  /* Mapas semánticos (compatibilidad con estilos existentes) */
+  --primary: var(--azul-unibague);
+  --primary-light: var(--azul-claro);
+  --success: var(--verde-oliva);
+  --danger: var(--rojo);
+  --warning: var(--amarillo-quemado);
   --dark: #2c3e50;
-  --light: #ecf0f1;
+  --light: var(--blanco);
   --border: #bdc3c7;
-  --text: #34495e;
+  --text: var(--gris-texto);
   --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+  --primary-gradient: linear-gradient(135deg, var(--primary-light) 0%, var(--morado) 45%, var(--primary) 100%);
+  --primary-dark: #002a57;
 }
 
 html {
@@ -27,7 +47,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f5f6fa;
+  background-color: var(--gris-fondo);
   color: var(--text);
   line-height: 1.6;
 }
@@ -117,7 +137,7 @@ a:hover {
 }
 
 .btn-primary:hover {
-  background-color: #2980b9;
+  background-color: var(--primary-dark); /* versión más oscura del azul institucional */
 }
 
 .btn-success {
@@ -177,7 +197,7 @@ a:hover {
 .form-textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 61, 124, 0.12);
 }
 
 .form-textarea {

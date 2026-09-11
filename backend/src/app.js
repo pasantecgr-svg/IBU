@@ -8,7 +8,10 @@ import productosRoutes from './routes/productos.js';
 import categoriasRoutes from './routes/categorias.js';
 import archivosRoutes from './routes/archivos.js';
 import reportesRoutes from './routes/reportes.js';
+import ordenesRoutes from './routes/ordenes.js';
+import notificacionesRoutes from './routes/notificaciones.js';
 import authRoutes from './routes/auth.js';
+import usuariosRoutes from './routes/usuarios.js';
 
 dotenv.config();
 
@@ -37,6 +40,9 @@ app.use('/api/productos', productosRoutes);
 app.use('/api/categorias', categoriasRoutes);
 app.use('/api/archivos', archivosRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/api/ordenes', ordenesRoutes);
+app.use('/api/notificaciones', notificacionesRoutes);
+app.use('/api/usuarios', usuariosRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {

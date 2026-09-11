@@ -5,10 +5,20 @@ import { verifyGoogleToken } from '../utils/googleOAuth.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ibu-secret-change-me';
 const DOMINIO_PERMITIDO = '@unibague.edu.co';
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'pasantecgr@unibague.edu.co').toLowerCase();
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'cgr@unibague.edu.co,ibu@unibague.edu.co')
+  .split(',')
+  .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
+  .filter(Boolean);
+
+const EMAIL_SENDERS = (process.env.EMAIL_SENDERS || 'IBU@unibague.edu.co')
+  .split(',')
+  .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
+  .filter(Boolean);
 
 const normalizarEmail = (email) => (typeof email === 'string' ? email.trim().toLowerCase() : '');
-const obtenerRolUsuario = (email) => (normalizarEmail(email) === ADMIN_EMAIL ? 'ADMIN' : 'USER');
+const obtenerRolUsuario = (email) => (ADMIN_EMAILS.includes(normalizarEmail(email)) ? 'ADMIN' : 'USER');
+
+const puedeEnviarCorreos = (email) => EMAIL_SENDERS.includes(normalizarEmail(email));
 
 const serializarUsuario = (usuario) => ({
   id: usuario.id,
@@ -281,3 +291,5 @@ export const cambiarPassword = async (req, res) => {
     });
   }
 };
+
+export { ADMIN_EMAILS, EMAIL_SENDERS, puedeEnviarCorreos };

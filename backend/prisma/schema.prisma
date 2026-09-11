@@ -8,18 +8,23 @@ datasource db {
 }
 
 model usuarios {
-  id            String   @id @default(uuid()) @db.Uuid
-  email         String   @unique
-  password_hash String
-  nombre        String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  id              String            @id @default(uuid()) @db.Uuid
+  email           String            @unique
+  password_hash   String?
+  nombre          String?
+  role            String            @default("USER")
+  google_id       String?           @unique
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  // Relaciones
+  ordenes_trabajo ordenes_trabajo[]
+  reportes        reportes[]
 }
 
 model categorias {
-  id         String   @id @default(uuid()) @db.Uuid
-  nombre     String   @unique
-  created_at DateTime @default(now())
+  id         String      @id @default(uuid()) @db.Uuid
+  nombre     String      @unique
+  created_at DateTime    @default(now())
   productos  productos[]
 }
 
@@ -32,8 +37,13 @@ model productos {
   numero_serie        String?
   cantidad_total      Int
   cantidad_disponible Int
+  unidad              String? // e.g., 'metros', 'unidades'
+  metraje_total       Int? // total meters for carrete-type products
+  metraje_restante    Int? // remaining meters
   ubicacion           String?
   estado              String?
+  activo_fijo         String?  // número o código de activo fijo (opcional)
+  stock_estado        String?   @default("normal")
   fecha_adquisicion   DateTime? @db.Date
   foto_url            String?
   descripcion         String?
@@ -41,7 +51,49 @@ model productos {
   updated_at          DateTime  @updatedAt
 
   categorias categorias @relation(fields: [categoria_id], references: [id])
-  archivos  archivos[]
+  archivos   archivos[]
+  ot_items   ot_items[]
+}
+
+model ordenes_trabajo {
+  id            String   @id @default(uuid()) @db.Uuid
+  titulo        String
+  descripcion   String?
+  // Secuencia numérica autoincremental para mostrar el número de orden (empieza en 1)
+  secuencia     BigInt   @default(autoincrement()) @db.BigInt
+  // Número legible de orden: '01' para la primera, '02', ..., '10', '11', etc.
+  numero        String?  @unique
+  usuario_id    String   @db.Uuid
+  mantis_ticket String? // campo para pegar número de ticket de Mantis
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  usuario usuarios   @relation(fields: [usuario_id], references: [id])
+  items   ot_items[]
+}
+
+model ot_items {
+  id                String  @id @default(uuid()) @db.Uuid
+  orden_id          String  @db.Uuid
+  producto_id       String  @db.Uuid
+  cantidad          Int
+  metraje_usado     Int? // metros usados para este item
+  cable_descripcion String? // texto para indicar el cable utilizado
+
+  ordenes_trabajo ordenes_trabajo @relation(fields: [orden_id], references: [id])
+  productos       productos       @relation(fields: [producto_id], references: [id])
+}
+
+model reportes {
+  id          String   @id @default(uuid()) @db.Uuid
+  tipo        String // e.g., 'consumo', 'mantenimiento', 'alerta'
+  titulo      String
+  descripcion String?
+  archivo_url String?
+  creado_por  String?  @db.Uuid
+  created_at  DateTime @default(now())
+
+  usuario usuarios? @relation(fields: [creado_por], references: [id])
 }
 
 model archivos {

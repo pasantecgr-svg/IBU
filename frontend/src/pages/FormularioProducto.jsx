@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { productosAPI, categoriasAPI, archivosAPI } from '../utils/api';
 import '../styles/formulario.css';
 
 export default function FormularioProducto({ producto, onGuardar }) {
+  const usuario = useSelector((state) => state.auth.user);
+  const isAdmin = usuario && usuario.role === 'ADMIN';
+
+  if (!isAdmin) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h3>Acceso denegado</h3>
+        <p>No tienes permisos para crear o editar productos. Contacta con un administrador.</p>
+      </div>
+    );
+  }
   const [formData, setFormData] = useState({
     nombre: '',
     categoria_id: '',
@@ -14,7 +26,8 @@ export default function FormularioProducto({ producto, onGuardar }) {
     estado: 'nuevo',
     fecha_adquisicion: new Date().toISOString().split('T')[0],
     foto_url: '',
-    descripcion: ''
+    descripcion: '',
+    activo_fijo: ''
   });
 
   const [categorias, setCategorias] = useState([]);
@@ -40,11 +53,9 @@ export default function FormularioProducto({ producto, onGuardar }) {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: name.includes('cantidad') || name === 'id' ? parseInt(value) : value
-    });
+    const { name, value, type, checked } = e.target;
+    const parsed = type === 'checkbox' ? checked : (name.includes('cantidad') || name === 'id' ? parseInt(value) : value);
+    setFormData({ ...formData, [name]: parsed });
   };
 
   const handleFotoChange = (e) => {
@@ -162,6 +173,17 @@ export default function FormularioProducto({ producto, onGuardar }) {
                 value={formData.marca}
                 onChange={handleInputChange}
                 placeholder="ej: Cisco"
+                className="form-input"
+              />
+            </div>
+            <div className="form-group">
+              <label>Número de Activo Fijo</label>
+              <input
+                type="text"
+                name="activo_fijo"
+                value={formData.activo_fijo || ''}
+                onChange={handleInputChange}
+                placeholder="ej: 12345 (opcional)"
                 className="form-input"
               />
             </div>

@@ -1,24 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { reportesAPI } from '../utils/api';
+import { AlertTriangle, BarChart3, CheckCircle2, Download, FileBarChart, FileText, Package, RefreshCw, Ruler } from 'lucide-react';
 import '../styles/dashboard.css';
 
 export default function Dashboard() {
-  const usuario = useSelector((state) => state.auth.user);
-  const isAdmin = usuario && usuario.role === 'ADMIN';
-
-  if (!isAdmin) {
-    return (
-      <div style={{ padding: 24 }}>
-        <h3>Acceso denegado</h3>
-        <p>No tienes permisos para ver el dashboard. Contacta con un administrador.</p>
-      </div>
-    );
-  }
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const stockBajo = stats?.stockBajo || [];
   const stockEstados = stats?.stockEstados || {};
 
   useEffect(() => {
@@ -51,7 +39,7 @@ export default function Dashboard() {
         // Revoke después de un tiempo para no invalidar la descarga prematuramente
         setTimeout(() => window.URL.revokeObjectURL(url), 5000);
         if (!newTab) {
-          alert('No se pudo abrir el PDF en nueva pestaña. Revisa bloqueadores o permisos.');
+          console.warn('No se pudo abrir el PDF en nueva pestaña. Revisa bloqueadores o permisos.');
         }
       } else {
         const link = document.createElement('a');
@@ -64,7 +52,7 @@ export default function Dashboard() {
         setTimeout(() => window.URL.revokeObjectURL(url), 2000);
       }
     } catch (err) {
-      alert('Error al descargar PDF: ' + err.message);
+      console.error('Error al descargar PDF: ' + err.message);
     }
   };
 
@@ -79,7 +67,7 @@ export default function Dashboard() {
         const newTab = window.open(url);
         setTimeout(() => window.URL.revokeObjectURL(url), 5000);
         if (!newTab) {
-          alert('No se pudo abrir el archivo en nueva pestaña. Revisa bloqueadores o permisos.');
+          console.warn('No se pudo abrir el archivo en nueva pestaña. Revisa bloqueadores o permisos.');
         }
       } else {
         const link = document.createElement('a');
@@ -91,7 +79,7 @@ export default function Dashboard() {
         setTimeout(() => window.URL.revokeObjectURL(url), 2000);
       }
     } catch (err) {
-      alert('Error al descargar Excel: ' + err.message);
+      console.error('Error al descargar Excel: ' + err.message);
     }
   };
 
@@ -100,11 +88,11 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      <h2>📊 Dashboard</h2>
+      <h2><BarChart3 size={22} aria-hidden="true" /> Dashboard</h2>
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">📦</div>
+          <div className="stat-icon"><Package size={32} aria-hidden="true" /></div>
           <div className="stat-content">
             <h3>Total de Equipos</h3>
             <p className="stat-number">{stats?.totalEquipos || 0}</p>
@@ -112,7 +100,7 @@ export default function Dashboard() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">📊</div>
+          <div className="stat-icon"><BarChart3 size={32} aria-hidden="true" /></div>
           <div className="stat-content">
             <h3>Cantidad Total</h3>
             <p className="stat-number">{stats?.totalCantidad || 0}</p>
@@ -120,7 +108,7 @@ export default function Dashboard() {
         </div>
 
         <div className="stat-card success">
-          <div className="stat-icon">✅</div>
+          <div className="stat-icon"><CheckCircle2 size={32} aria-hidden="true" /></div>
           <div className="stat-content">
             <h3>Disponible</h3>
             <p className="stat-number">{stats?.totalDisponible || 0}</p>
@@ -129,7 +117,7 @@ export default function Dashboard() {
         </div>
 
         <div className="stat-card info">
-          <div className="stat-icon">🧵</div>
+          <div className="stat-icon"><Ruler size={32} aria-hidden="true" /></div>
           <div className="stat-content">
             <h3>Metraje restante</h3>
             <p className="stat-number">{stats?.totalMetrajeRestante ?? 0} {stats?.metrajeUnidad || ''}</p>
@@ -138,7 +126,7 @@ export default function Dashboard() {
         </div>
 
         <div className="stat-card warning">
-          <div className="stat-icon">⚠️</div>
+          <div className="stat-icon"><AlertTriangle size={32} aria-hidden="true" /></div>
           <div className="stat-content">
             <h3>Utilizado</h3>
             <p className="stat-number">{stats?.totalUtilizado || 0}</p>
@@ -146,54 +134,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {stockBajo.length > 0 && (
-        <section className="stats-section alert-section">
-          <h3>⚠️ Productos con stock bajo</h3>
-          <div className="stock-alert-list">
-            {stockBajo.map((producto) => (
-              <div key={producto.id} className="stock-alert-item">
-                <div>
-                  <strong>{producto.producto}</strong>
-                  <small>{producto.categoria}</small>
-                </div>
-                <span>{producto.cantidad_disponible} unidades</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {stats?.metrajeBajo && stats.metrajeBajo.length > 0 && (
-        <section className="stats-section alert-section">
-          <h3>⚠️ Productos con metraje bajo</h3>
-          <div className="stock-alert-list">
-            {stats.metrajeBajo.map((p) => (
-              <div key={p.id} className="stock-alert-item">
-                <div>
-                  <strong>{p.nombre}</strong>
-                  <small>{p.categoria}</small>
-                </div>
-                <span>{p.metraje_restante} {p.unidad} ({p.porcentaje_restante}%)</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       <section className="stats-section">
-        <h3>📦 Estado del stock</h3>
-        <div className="categories-list">
-          {Object.entries(stockEstados).map(([estado, cantidad]) => (
-            <div key={estado} className="category-item">
-              <span className="category-name">{estado}</span>
-              <span className="category-count">{cantidad} productos</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="stats-section">
-        <h3>📈 Por Categoría</h3>
+        <h3><FileBarChart size={18} aria-hidden="true" /> Por Categoría</h3>
         <div className="categories-list">
           {Object.entries(stats?.porCategoria || {}).map(([categoria, cantidad]) => (
             <div key={categoria} className="category-item">
@@ -205,16 +147,16 @@ export default function Dashboard() {
       </section>
 
       <section className="actions-section">
-        <h3>📥 Descargar Reportes</h3>
+        <h3><Download size={18} aria-hidden="true" /> Descargar Reportes</h3>
         <div className="buttons-group">
           <button className="btn btn-primary" onClick={descargarPDF}>
-            📄 Descargar PDF
+            <FileText size={17} aria-hidden="true" /> Descargar PDF
           </button>
           <button className="btn btn-success" onClick={descargarExcel}>
-            📊 Descargar Excel
+            <FileBarChart size={17} aria-hidden="true" /> Descargar Excel
           </button>
           <button className="btn btn-secondary" onClick={cargarEstadisticas}>
-            🔄 Actualizar
+            <RefreshCw size={17} aria-hidden="true" /> Actualizar
           </button>
         </div>
       </section>

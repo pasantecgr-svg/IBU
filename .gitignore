@@ -12,6 +12,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.log
+respaldo_*.sql
 frontend/dist/
 backend/node_modules/
 prisma/migrations/

@@ -1,20 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { productosAPI, categoriasAPI, archivosAPI } from '../utils/api';
+import { productosAPI, categoriasAPI, archivosAPI, usuariosAPI } from '../utils/api';
+import { Check, Pencil, Plus, Save, Trash2 } from 'lucide-react';
 import '../styles/formulario.css';
 
 export default function FormularioProducto({ producto, onGuardar }) {
-  const usuario = useSelector((state) => state.auth.user);
-  const isAdmin = usuario && usuario.role === 'ADMIN';
-
-  if (!isAdmin) {
-    return (
-      <div style={{ padding: 24 }}>
-        <h3>Acceso denegado</h3>
-        <p>No tienes permisos para crear o editar productos. Contacta con un administrador.</p>
-      </div>
-    );
-  }
   const [formData, setFormData] = useState({
     nombre: '',
     categoria_id: '',
@@ -22,7 +11,12 @@ export default function FormularioProducto({ producto, onGuardar }) {
     modelo: '',
     numero_serie: '',
     cantidad_total: 1,
+    unidad: '',
+    metraje_total: '',
+    metraje_restante: '',
     ubicacion: 'Almacén',
+    dependencia_codigo: '',
+    dependencia_nombre: '',
     estado: 'nuevo',
     fecha_adquisicion: new Date().toISOString().split('T')[0],
     foto_url: '',
@@ -31,13 +25,17 @@ export default function FormularioProducto({ producto, onGuardar }) {
   });
 
   const [categorias, setCategorias] = useState([]);
+  const [dependencias, setDependencias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [archivo, setArchivo] = useState(null);
   const [previewFoto, setPreviewFoto] = useState(null);
+  const [cargaRollos, setCargaRollos] = useState({ nombre: '', categoria_id: '', ubicacion: 'Almacén', metrajes: [''] });
+  const [guardandoRollos, setGuardandoRollos] = useState(false);
 
   useEffect(() => {
     cargarCategorias();
+    cargarDependencias();
     if (producto) {
       setFormData(producto);
     }
@@ -52,9 +50,28 @@ export default function FormularioProducto({ producto, onGuardar }) {
     }
   };
 
+  const cargarDependencias = async () => {
+    try {
+      const { data } = await usuariosAPI.dependencias();
+      setDependencias(data.dependencias || []);
+    } catch (err) {
+      console.error('Error cargando dependencias:', err);
+    }
+  };
+
+  const seleccionarDependencia = (e) => {
+    const dependencia = dependencias.find((item) => item.id === e.target.value);
+    setFormData({
+      ...formData,
+      dependencia_codigo: dependencia?.id || '',
+      dependencia_nombre: dependencia?.nombre || ''
+    });
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    const parsed = type === 'checkbox' ? checked : (name.includes('cantidad') || name === 'id' ? parseInt(value) : value);
+    const isNumeric = name.includes('cantidad') || name.includes('metraje') || name === 'id';
+    const parsed = type === 'checkbox' ? checked : (isNumeric && value !== '' ? parseInt(value, 10) : value);
     setFormData({ ...formData, [name]: parsed });
   };
 
@@ -68,6 +85,50 @@ export default function FormularioProducto({ producto, onGuardar }) {
       };
       reader.readAsDataURL(file);
       setArchivo(file);
+    }
+  };
+
+  const actualizarMetrajeRollo = (index, value) => {
+    const metrajes = [...cargaRollos.metrajes];
+    metrajes[index] = value;
+    setCargaRollos({ ...cargaRollos, metrajes });
+  };
+
+  const agregarMetraje = () => setCargaRollos({ ...cargaRollos, metrajes: [...cargaRollos.metrajes, ''] });
+
+  const quitarMetraje = (index) => {
+    if (cargaRollos.metrajes.length === 1) return;
+    setCargaRollos({ ...cargaRollos, metrajes: cargaRollos.metrajes.filter((_, itemIndex) => itemIndex !== index) });
+  };
+
+  const crearRollos = async (event) => {
+    event.preventDefault();
+    const metrajes = cargaRollos.metrajes.map((metraje) => Number(metraje)).filter((metraje) => Number.isInteger(metraje) && metraje > 0);
+    if (!cargaRollos.nombre.trim() || !cargaRollos.categoria_id || metrajes.length !== cargaRollos.metrajes.length) {
+      setError('Completa el nombre, la categoría y un metraje válido para cada rollo.');
+      return;
+    }
+
+    try {
+      setGuardandoRollos(true);
+      setError(null);
+      await Promise.all(metrajes.map((metraje, index) => productosAPI.crear({
+        nombre: `${cargaRollos.nombre.trim()} - Rollo ${index + 1}`,
+        categoria_id: cargaRollos.categoria_id,
+        cantidad_total: 1,
+        unidad: 'metros',
+        metraje_total: metraje,
+        metraje_restante: metraje,
+        ubicacion: cargaRollos.ubicacion || 'Almacén',
+        estado: 'nuevo'
+      })));
+      setCargaRollos({ nombre: '', categoria_id: '', ubicacion: 'Almacén', metrajes: [''] });
+      onGuardar();
+    } catch (err) {
+      setError(err.response?.data?.error || 'No se pudieron crear los rollos');
+      console.error(err.response?.data?.error || 'No se pudieron crear los rollos');
+    } finally {
+      setGuardandoRollos(false);
     }
   };
 
@@ -96,19 +157,16 @@ export default function FormularioProducto({ producto, onGuardar }) {
         // Actualizar
         await productosAPI.actualizar(producto.id, payload);
         productoGuardado = { ...producto, ...payload };
-        alert('✅ Producto actualizado exitosamente');
       } else {
         // Crear
         const { data } = await productosAPI.crear(payload);
         productoGuardado = data.producto;
-        alert('✅ Producto creado exitosamente');
       }
 
       // Subir archivo si existe
       if (archivo && productoGuardado) {
         try {
           await archivosAPI.subir(productoGuardado.id, archivo);
-          alert('✅ Foto subida a Google Drive');
         } catch (err) {
           console.warn('Advertencia: No se pudo subir la foto:', err.message);
         }
@@ -125,9 +183,46 @@ export default function FormularioProducto({ producto, onGuardar }) {
 
   return (
     <div className="formulario-container">
-      <h2>{producto ? '✏️ Editar Producto' : '➕ Nuevo Producto'}</h2>
+      <h2>{producto ? <><Pencil size={22} aria-hidden="true" /> Editar Producto</> : <><Plus size={22} aria-hidden="true" /> Nuevo Producto</>}</h2>
 
       {error && <div className="error-message">{error}</div>}
+
+      {!producto && (
+        <section className="carga-rollos formulario-carga-rollos">
+          <div className="carga-rollos-heading">
+            <div>
+              <h3>Carga rápida de rollos</h3>
+              <p>Registra una sola vez el cable y asigna el metraje de cada rollo.</p>
+            </div>
+          </div>
+          <form onSubmit={crearRollos} className="carga-rollos-form">
+            <label>Nombre del cable
+              <input value={cargaRollos.nombre} onChange={(e) => setCargaRollos({ ...cargaRollos, nombre: e.target.value })} placeholder="Cable UTP Cat 6" required />
+            </label>
+            <label>Categoría
+              <select value={cargaRollos.categoria_id} onChange={(e) => setCargaRollos({ ...cargaRollos, categoria_id: e.target.value })} required>
+                <option value="">Selecciona una categoría</option>
+                {categorias.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
+              </select>
+            </label>
+            <label>Ubicación
+              <input value={cargaRollos.ubicacion} onChange={(e) => setCargaRollos({ ...cargaRollos, ubicacion: e.target.value })} />
+            </label>
+            <div className="metrajes-rollos">
+              <div className="metrajes-heading"><strong>Metraje por rollo</strong><span>{cargaRollos.metrajes.length} rollos</span></div>
+              {cargaRollos.metrajes.map((metraje, index) => (
+                <div className="metraje-row" key={index}>
+                  <span>Rollo {index + 1}</span>
+                  <input type="number" min="1" value={metraje} onChange={(e) => actualizarMetrajeRollo(index, e.target.value)} placeholder="Metros" required />
+                  <button type="button" className="btn-icon" onClick={() => quitarMetraje(index)} disabled={cargaRollos.metrajes.length === 1} title="Quitar rollo" aria-label={`Quitar rollo ${index + 1}`}><Trash2 size={16} aria-hidden="true" /></button>
+                </div>
+              ))}
+              <button type="button" className="btn btn-outline" onClick={agregarMetraje}><Plus size={15} aria-hidden="true" /> Agregar otro rollo</button>
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={guardandoRollos}>{guardandoRollos ? 'Creando rollos...' : 'Crear rollos'}</button>
+          </form>
+        </section>
+      )}
 
       <form onSubmit={handleSubmit} className="formulario-producto">
         <div className="form-section">
@@ -244,9 +339,35 @@ export default function FormularioProducto({ producto, onGuardar }) {
                 className="form-input"
               />
             </div>
+            <div className="form-group">
+              <label>Unidad</label>
+              <select name="unidad" value={formData.unidad || ''} onChange={handleInputChange} className="form-input">
+                <option value="">Unidades</option>
+                <option value="metros">Metros</option>
+              </select>
+            </div>
           </div>
 
           <div className="form-row">
+            <div className="form-group">
+              <label>Metraje total</label>
+              <input type="number" name="metraje_total" value={formData.metraje_total ?? ''} onChange={handleInputChange} min="0" placeholder="Solo para cables" className="form-input" />
+            </div>
+            <div className="form-group">
+              <label>Metraje restante</label>
+              <input type="number" name="metraje_restante" value={formData.metraje_restante ?? ''} onChange={handleInputChange} min="0" placeholder="Por defecto, igual al total" className="form-input" />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Dependencia responsable</label>
+              <select name="dependencia_codigo" value={formData.dependencia_codigo || ''} onChange={seleccionarDependencia} className="form-input">
+                <option value="">Sin dependencia asignada</option>
+                {dependencias.map((dependencia) => <option key={dependencia.id} value={dependencia.id}>{dependencia.nombre}</option>)}
+              </select>
+              <small>Redes, Sistemas de Información o Mantenimiento.</small>
+            </div>
             <div className="form-group">
               <label>Estado</label>
               <select
@@ -318,7 +439,7 @@ export default function FormularioProducto({ producto, onGuardar }) {
             disabled={loading}
             className="btn btn-primary btn-large"
           >
-            {loading ? '⏳ Guardando...' : (producto ? '💾 Actualizar' : '✅ Crear Producto')}
+            {loading ? 'Guardando...' : (producto ? <><Save size={17} aria-hidden="true" /> Actualizar</> : <><Check size={17} aria-hidden="true" /> Crear Producto</>)}
           </button>
         </div>
       </form>

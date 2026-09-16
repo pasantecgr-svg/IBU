@@ -6,11 +6,11 @@ import FormularioProducto from './pages/FormularioProducto';
 import GestionCategorias from './pages/GestionCategorias';
 import OrdenesTrabajo from './pages/OrdenesTrabajo';
 import AdminUsuarios from './pages/AdminUsuarios';
-import { authAPI } from './utils/api';
+import Organigrama from './pages/Organigrama';
+import { authAPI, notificacionesAPI } from './utils/api';
 import { setSession, clearSession, setTheme } from './store/authSlice';
+import { BarChart3, Bell, Building2, ClipboardList, FolderPlus, Tags, Users, Moon, Sun, X } from 'lucide-react';
 import './styles/app.css';
-
-const DOMINIO_PERMITIDO = '@unibague.edu.co';
 
 const getGoogleClientId = () => (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 const isGoogleClientPlaceholder = (clientId = '') => {
@@ -18,11 +18,6 @@ const isGoogleClientPlaceholder = (clientId = '') => {
   if (!value) return true;
 
   return /REEMPLAZAR|TU_CLIENT_ID_DE_GOOGLE|your-google-client-id|example|<your-google-client-id>/i.test(value);
-};
-
-const validarCorreoUnibague = (email) => {
-  const valor = String(email || '').trim().toLowerCase();
-  return valor.length > 0 && valor.endsWith(DOMINIO_PERMITIDO);
 };
 
 export default function App() {
@@ -34,12 +29,12 @@ export default function App() {
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [errorLogin, setErrorLogin] = useState('');
   const [loadingAuth, setLoadingAuth] = useState(false);
-  
+  const [notificaciones, setNotificaciones] = useState([]);
+  const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
 
   const navegarA = (nuevaPagina, producto = null) => {
-    // prevenir navegación a páginas de ADMIN si no es ADMIN
     const isAdmin = (usuario && usuario.role === 'ADMIN');
-    const adminOnlyPages = ['dashboard', 'productos', 'nuevo', 'ordenes'];
+    const adminOnlyPages = ['usuarios', 'organigrama'];
     if (!isAdmin && adminOnlyPages.includes(nuevaPagina)) {
       setPagina('acceso_denegado');
       return;
@@ -84,6 +79,23 @@ export default function App() {
     setErrorLogin('');
     setPagina('dashboard');
   };
+
+  useEffect(() => {
+    if (!token || !usuario) return undefined;
+
+    const cargarNotificaciones = async () => {
+      try {
+        const { data } = await notificacionesAPI.obtener();
+        setNotificaciones(data.notificaciones || []);
+      } catch (error) {
+        console.error('Error cargando notificaciones:', error);
+      }
+    };
+
+    cargarNotificaciones();
+    const intervalo = window.setInterval(cargarNotificaciones, 30000);
+    return () => window.clearInterval(intervalo);
+  }, [token, usuario]);
 
   useEffect(() => {
     const clientId = getGoogleClientId();
@@ -148,9 +160,7 @@ export default function App() {
     }
 
     window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        setErrorLogin('Google bloqueó el inicio de sesión por cookies de terceros o por configuración del navegador. Habilita cookies de terceros y usa un Client ID válido.');
-      }
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) return;
     });
   };
 
@@ -165,7 +175,7 @@ export default function App() {
           <div className="login-form-wrapper">
             <div className="login-form">
               <h2>Iniciar sesión</h2>
-              <p className="login-subtitle">Ingresa con tu cuenta institucional de Google</p>
+              <p className="login-subtitle">Ingresa con tu cuenta de Google</p>
 
               {errorLogin && <div className="login-error">{errorLogin}</div>}
 
@@ -189,53 +199,60 @@ export default function App() {
           </div>
 
           <ul className="nav-menu">
-            {usuario && usuario.role === 'ADMIN' ? (
-              <>
+            <>
                 <li>
                   <button className={`nav-link ${pagina === 'dashboard' ? 'active' : ''}`} onClick={() => navegarA('dashboard')}>
-                    📊 Dashboard
+                    <BarChart3 size={17} aria-hidden="true" /> Dashboard
                   </button>
                 </li>
                 <li>
                   <button className={`nav-link ${pagina === 'productos' ? 'active' : ''}`} onClick={() => navegarA('productos')}>
-                    📋 Productos
+                    <ClipboardList size={17} aria-hidden="true" /> Productos
                   </button>
                 </li>
                 <li>
                   <button className={`nav-link ${pagina === 'nuevo' ? 'active' : ''}`} onClick={() => navegarA('nuevo')}>
-                    ➕ Nuevo Producto
+                    <FolderPlus size={17} aria-hidden="true" /> Nuevo Producto
                   </button>
                 </li>
                 <li>
                   <button className={`nav-link ${pagina === 'categorias' ? 'active' : ''}`} onClick={() => navegarA('categorias')}>
-                    🏷️ Categorías
+                    <Tags size={17} aria-hidden="true" /> Categorías
                   </button>
                 </li>
                 <li>
                   <button className={`nav-link ${pagina === 'ordenes' ? 'active' : ''}`} onClick={() => navegarA('ordenes')}>
-                    🧾 Órdenes de Trabajo
+                    <ClipboardList size={17} aria-hidden="true" /> Órdenes de Trabajo
                   </button>
                 </li>
-                <li>
-                  <button className={`nav-link ${pagina === 'usuarios' ? 'active' : ''}`} onClick={() => navegarA('usuarios')}>
-                    👥 Usuarios
-                  </button>
-                </li>
-              </>
-            ) : (
-              <>
-                <li>
-                  <button className={`nav-link ${pagina === 'categorias' ? 'active' : ''}`} onClick={() => navegarA('categorias')}>
-                    🏷️ Categorías
-                  </button>
-                </li>
-              </>
-            )}
+                {usuario.role === 'ADMIN' && (
+                  <>
+                    <li><button className={`nav-link ${pagina === 'usuarios' ? 'active' : ''}`} onClick={() => navegarA('usuarios')}><Users size={17} aria-hidden="true" /> Usuarios</button></li>
+                  </>
+                )}
+            </>
           </ul>
 
           <div className="nav-actions">
+            <div className="notification-center">
+              <button className="notification-toggle" onClick={() => setMostrarNotificaciones(!mostrarNotificaciones)} title="Notificaciones" aria-label="Abrir notificaciones">
+                <Bell size={18} aria-hidden="true" />
+                {notificaciones.length > 0 && <span className="notification-count">{notificaciones.length > 9 ? '9+' : notificaciones.length}</span>}
+              </button>
+              {mostrarNotificaciones && (
+                <div className="notification-panel">
+                  <div className="notification-panel-header"><strong>Notificaciones</strong><button type="button" onClick={() => setMostrarNotificaciones(false)} aria-label="Cerrar notificaciones"><X size={16} /></button></div>
+                  {notificaciones.length === 0 ? <p className="notification-empty">No tienes notificaciones pendientes.</p> : notificaciones.map((notificacion) => (
+                    <div className={`notification-item ${notificacion.tipo}`} key={notificacion.id}>
+                      <Bell size={17} aria-hidden="true" />
+                      <div><strong>{notificacion.titulo}</strong><span>{notificacion.mensaje}</span></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <button className="theme-toggle" onClick={toggleTheme} title="Alternar modo día/noche">
-              {theme === 'light' ? '🌙' : '☀️'}
+              {theme === 'light' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
             </button>
             <button className="logout-btn" onClick={cerrarSesion}>Cerrar sesión</button>
           </div>
@@ -254,6 +271,7 @@ export default function App() {
         {pagina === 'categorias' && <GestionCategorias />}
         {pagina === 'ordenes' && <OrdenesTrabajo />}
         {pagina === 'usuarios' && <AdminUsuarios />}
+        {pagina === 'organigrama' && <Organigrama />}
         {pagina === 'acceso_denegado' && (
           <div style={{ padding: 24 }}>
             <h3>Acceso denegado</h3>
@@ -265,7 +283,7 @@ export default function App() {
       
 
       <footer className="footer">
-        <p>© 2024 IBU Inventario de Bodega Unibague - v1.0</p>
+        <p>© {new Date().getFullYear()} IBU Inventario de Bodega Unibague - v1.0</p>
       </footer>
     </div>
   );

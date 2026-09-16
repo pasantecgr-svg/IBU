@@ -46,6 +46,10 @@ export const crearOrden = async (req, res) => {
         const producto = productosMap.get(producto_id);
         if (!producto) continue; // ya verificado, pero defensivo
 
+        if (cantidad < 0 || metraje_usado < 0) {
+          throw new Error('La cantidad y el metraje utilizado no pueden ser negativos');
+        }
+
         if (typeof cantidad === 'number' && cantidad > 0) {
           const disponible = Number(producto.cantidad_disponible || 0);
           if (cantidad > disponible) {
@@ -103,7 +107,7 @@ export const crearOrden = async (req, res) => {
           const updated = await tx.productos.update({ where: { id: producto_id }, data: updates });
           console.log('Producto actualizado:', updated.id, updated.cantidad_disponible, updated.metraje_restante);
 
-          // Determinar si está bajo umbral: cantidad_disponible <=5 OR metraje_restante <=10 o <=10% del total
+          // Determinar si está bajo umbral por unidades o por metraje.
           const bajoCantidad = typeof updated.cantidad_disponible === 'number' && updated.cantidad_disponible > 0 && updated.cantidad_disponible <= 5;
           let bajoMetraje = false;
           if (typeof updated.metraje_restante === 'number') {
@@ -207,7 +211,7 @@ export const crearOrden = async (req, res) => {
   } catch (error) {
     console.error('Error crear orden:', error);
     const msg = String(error?.message || '');
-    if (msg.startsWith('Productos no encontrados') || msg.includes('Stock insuficiente') || msg.includes('Metraje insuficiente')) {
+    if (msg.startsWith('Productos no encontrados') || msg.includes('Stock insuficiente') || msg.includes('Metraje insuficiente') || msg.includes('no pueden ser negativos')) {
       return res.status(400).json({ success: false, error: msg });
     }
     res.status(500).json({ success: false, error: error.message });
@@ -247,7 +251,9 @@ export const editarOrden = async (req, res) => {
     const { id } = req.params;
     const { titulo, descripcion, mantis_ticket, items } = req.body || {};
 
-    if (!id) return res.status(400).json({ success: false, error: 'ID de orden requerido' });
+    if (!id || !titulo || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, error: 'ID, título e items son requeridos' });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const orden = await tx.ordenes_trabajo.findUnique({ where: { id }, include: { items: true } });
@@ -258,78 +264,84 @@ export const editarOrden = async (req, res) => {
         throw new Error('No autorizado para editar esta orden');
       }
 
-      // Restaurar stock/metraje de items previos en memoria
       const prevItems = orden.items || [];
-      const affectedProductIds = Array.from(new Set([...prevItems.map(i => i.producto_id), ...(Array.isArray(items) ? items.map(i => i.producto_id) : [])]));
+      const affectedProductIds = Array.from(new Set([...prevItems.map((i) => i.producto_id), ...items.map((i) => i.producto_id).filter(Boolean)]));
       const productos = await tx.productos.findMany({ where: { id: { in: affectedProductIds } } });
       const productosMap = new Map(productos.map(p => [p.id, p]));
 
-      // Calcular disponibilidad temporal: sumar los valores anteriores para poder validar nuevos items
-      const tempDisponibilidad = new Map();
-      for (const p of productos) {
-        tempDisponibilidad.set(p.id, {
-          cantidad: Number(p.cantidad_disponible || 0),
-          metraje: Number(p.metraje_restante || 0)
+      const anteriores = new Map();
+      for (const it of prevItems) {
+        const current = anteriores.get(it.producto_id) || { cantidad: 0, metraje: 0 };
+        current.cantidad += Number(it.cantidad || 0);
+        current.metraje += Number(it.metraje_usado || 0);
+        anteriores.set(it.producto_id, current);
+      }
+
+      const nuevos = new Map();
+      for (const it of items) {
+        const cantidad = Number(it.cantidad || 0);
+        const metraje = Number(it.metraje_usado || 0);
+        if (!it.producto_id || !Number.isInteger(cantidad) || !Number.isInteger(metraje) || cantidad < 0 || metraje < 0) {
+          throw new Error('Cada item debe tener producto, cantidad y metraje válidos');
+        }
+        const current = nuevos.get(it.producto_id) || { cantidad: 0, metraje: 0 };
+        current.cantidad += cantidad;
+        current.metraje += metraje;
+        nuevos.set(it.producto_id, current);
+      }
+
+      const disponibilidad = new Map();
+      for (const [productoId, consumo] of nuevos) {
+        const producto = productosMap.get(productoId);
+        if (!producto) throw new Error(`Producto no encontrado: ${productoId}`);
+        const anterior = anteriores.get(productoId) || { cantidad: 0, metraje: 0 };
+        const cantidadDisponible = Number(producto.cantidad_disponible || 0) + anterior.cantidad;
+        if (consumo.cantidad > cantidadDisponible) {
+          throw new Error(`Stock insuficiente para ${producto.nombre}: disponible ${cantidadDisponible}`);
+        }
+        if (consumo.metraje > 0 && typeof producto.metraje_restante !== 'number') {
+          throw new Error(`El producto ${producto.nombre} no tiene metraje configurado`);
+        }
+        const metrajeDisponible = Number(producto.metraje_restante || 0) + anterior.metraje;
+        if (consumo.metraje > metrajeDisponible) {
+          throw new Error(`Metraje insuficiente para ${producto.nombre}: disponible ${metrajeDisponible}`);
+        }
+        disponibilidad.set(productoId, { cantidadDisponible, metrajeDisponible });
+      }
+
+      await tx.ordenes_trabajo.update({ where: { id }, data: { titulo, descripcion, mantis_ticket } });
+      await tx.ot_items.deleteMany({ where: { orden_id: id } });
+
+      const lowStockProducts = [];
+      for (const it of items) {
+        await tx.ot_items.create({
+          data: {
+            orden_id: id,
+            producto_id: it.producto_id,
+            cantidad: Number(it.cantidad || 0),
+            metraje_usado: Number(it.metraje_usado || 0),
+            cable_descripcion: it.cable_descripcion || null
+          }
         });
       }
 
-      for (const it of prevItems) {
-        const cur = tempDisponibilidad.get(it.producto_id);
-        if (cur) {
-          cur.cantidad += Number(it.cantidad || 0);
-          cur.metraje += Number(it.metraje_usado || 0);
+      for (const producto of productos) {
+        const anterior = anteriores.get(producto.id) || { cantidad: 0, metraje: 0 };
+        const nuevo = nuevos.get(producto.id) || { cantidad: 0, metraje: 0 };
+        const updates = {
+          cantidad_disponible: Math.max(0, Number(producto.cantidad_disponible || 0) + anterior.cantidad - nuevo.cantidad)
+        };
+        if (typeof producto.metraje_restante === 'number') {
+          updates.metraje_restante = Math.max(0, Number(producto.metraje_restante || 0) + anterior.metraje - nuevo.metraje);
         }
+        const updated = await tx.productos.update({ where: { id: producto.id }, data: updates });
+        const bajoCantidad = updated.cantidad_disponible > 0 && updated.cantidad_disponible <= 5;
+        const bajoMetraje = typeof updated.metraje_restante === 'number' && (updated.metraje_restante <= 10 || (updated.metraje_total > 0 && updated.metraje_restante / updated.metraje_total <= 0.1));
+        if (bajoCantidad || bajoMetraje) lowStockProducts.push(updated);
       }
 
-      // Validar nuevos items
-      if (Array.isArray(items)) {
-        for (const it of items) {
-          const { producto_id, cantidad = 0, metraje_usado = 0 } = it;
-          const cur = tempDisponibilidad.get(producto_id);
-          if (!cur) throw new Error(`Producto no encontrado: ${producto_id}`);
-          if (cantidad > cur.cantidad) throw new Error(`Stock insuficiente para producto ${producto_id}`);
-          if (metraje_usado > cur.metraje) throw new Error(`Metraje insuficiente para producto ${producto_id}`);
-          // consumir en la disponibilidad temporal para validar acumulados
-          cur.cantidad -= cantidad;
-          cur.metraje -= metraje_usado;
-        }
-      }
-
-      // Actualizar campos de la orden
-      await tx.ordenes_trabajo.update({ where: { id }, data: { titulo, descripcion, mantis_ticket } });
-
-      // Eliminar items previos
-      await tx.ot_items.deleteMany({ where: { orden_id: id } });
-
-      // Crear nuevos items y aplicar decrementos definitivos
-      const lowStockProducts = [];
-      if (Array.isArray(items)) {
-        for (const it of items) {
-          const { producto_id, cantidad = 0, metraje_usado = 0, cable_descripcion = null } = it;
-          await tx.ot_items.create({ data: { orden_id: id, producto_id, cantidad, metraje_usado, cable_descripcion } });
-
-          const producto = await tx.productos.findUnique({ where: { id: producto_id } });
-          if (!producto) continue;
-          const updates = {};
-          if (typeof cantidad === 'number' && cantidad > 0) updates.cantidad_disponible = Math.max(0, (producto.cantidad_disponible || 0) - cantidad);
-          if (typeof metraje_usado === 'number' && metraje_usado > 0 && typeof producto.metraje_restante === 'number') updates.metraje_restante = Math.max(0, (producto.metraje_restante || 0) - metraje_usado);
-          if (Object.keys(updates).length) {
-            const updated = await tx.productos.update({ where: { id: producto_id }, data: updates });
-            const bajoCantidad = typeof updated.cantidad_disponible === 'number' && updated.cantidad_disponible > 0 && updated.cantidad_disponible <= 5;
-            let bajoMetraje = false;
-            if (typeof updated.metraje_restante === 'number') {
-              if (updated.metraje_restante <= 10) bajoMetraje = true;
-              if (typeof updated.metraje_total === 'number' && updated.metraje_total > 0) {
-                const porcentaje = updated.metraje_restante / updated.metraje_total;
-                if (porcentaje <= 0.1) bajoMetraje = true;
-              }
-            }
-            if (bajoCantidad || bajoMetraje) lowStockProducts.push(updated);
-          }
-        }
-      }
-
-      return { success: true, lowStockProducts };
+      const actualizada = await tx.ordenes_trabajo.findUnique({ where: { id }, include: { items: { include: { productos: true } } } });
+      return { orden: actualizada, lowStockProducts };
     });
 
     // Enviar alertas si aplica
@@ -344,15 +356,73 @@ export const editarOrden = async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: 'Orden actualizada' });
+    res.json({ success: true, message: 'Orden actualizada', orden: convertBigIntToString(result.orden) });
   } catch (error) {
     console.error('Error editar orden:', error);
     const msg = String(error?.message || '');
-    if (msg === 'Orden no encontrada' || msg.startsWith('Producto no encontrado') || msg.includes('insuficiente') || msg.includes('No autorizado')) {
+    if (msg === 'Orden no encontrada' || msg.startsWith('Producto no encontrado') || msg.includes('insuficiente') || msg.includes('No autorizado') || msg.includes('no tiene metraje') || msg.includes('Cada item')) {
       return res.status(400).json({ success: false, error: msg });
     }
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
-export default { crearOrden, listarOrdenes, obtenerOrden };
+export const eliminarOrden = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ success: false, error: 'ID de orden requerido' });
+
+    await prisma.$transaction(async (tx) => {
+      const orden = await tx.ordenes_trabajo.findUnique({ where: { id }, include: { items: true } });
+      if (!orden) throw new Error('Orden no encontrada');
+
+      if (req.user.role !== 'ADMIN' && orden.usuario_id !== req.user.id) {
+        throw new Error('No autorizado para eliminar esta orden');
+      }
+
+      const consumos = new Map();
+      for (const item of orden.items || []) {
+        const consumo = consumos.get(item.producto_id) || { cantidad: 0, metraje: 0 };
+        consumo.cantidad += Number(item.cantidad || 0);
+        consumo.metraje += Number(item.metraje_usado || 0);
+        consumos.set(item.producto_id, consumo);
+      }
+
+      for (const [productoId, consumo] of consumos) {
+        const producto = await tx.productos.findUnique({ where: { id: productoId } });
+        if (!producto) continue;
+
+        const updates = {
+          cantidad_disponible: Math.min(
+            Number(producto.cantidad_total || 0),
+            Number(producto.cantidad_disponible || 0) + consumo.cantidad
+          )
+        };
+        if (typeof producto.metraje_restante === 'number') {
+          const limiteMetraje = typeof producto.metraje_total === 'number'
+            ? producto.metraje_total
+            : Number.MAX_SAFE_INTEGER;
+          updates.metraje_restante = Math.min(
+            limiteMetraje,
+            Number(producto.metraje_restante || 0) + consumo.metraje
+          );
+        }
+        await tx.productos.update({ where: { id: productoId }, data: updates });
+      }
+
+      await tx.ot_items.deleteMany({ where: { orden_id: id } });
+      await tx.ordenes_trabajo.delete({ where: { id } });
+    });
+
+    res.json({ success: true, message: 'Orden eliminada y consumo devuelto al inventario' });
+  } catch (error) {
+    console.error('Error eliminar orden:', error);
+    const msg = String(error?.message || '');
+    if (msg === 'Orden no encontrada' || msg.includes('No autorizado')) {
+      return res.status(msg === 'Orden no encontrada' ? 404 : 403).json({ success: false, error: msg });
+    }
+    res.status(500).json({ success: false, error: msg || 'No se pudo eliminar la orden' });
+  }
+};
+
+export default { crearOrden, listarOrdenes, obtenerOrden, editarOrden, eliminarOrden };

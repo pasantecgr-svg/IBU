@@ -4,20 +4,16 @@
     const prisma = mod.default || mod.prisma || mod;
     if (!prisma) throw new Error('Prisma client not found in import');
 
-    const admins = ['cgr@unibague.edu.co', 'ibu@unibague.edu.co'];
+    const admins = ['pasantecgr@unibague.edu.co', 'ibu@unibague.edu.co', 'cgr@unibague.edu.co'];
 
     for (const email of admins) {
-      const usuario = await prisma.usuarios.findUnique({ where: { email } });
-      if (!usuario) {
-        console.log(`No existe usuario con email ${email}`);
-        continue;
-      }
-      if (usuario.role === 'ADMIN') {
-        console.log(`${email} ya es ADMIN`);
-        continue;
-      }
-      await prisma.usuarios.update({ where: { email }, data: { role: 'ADMIN' } });
-      console.log(`Usuario ${email} actualizado a ADMIN`);
+      const nombre = email.split('@')[0];
+      const usuario = await prisma.usuarios.upsert({
+        where: { email },
+        update: { role: 'ADMIN' },
+        create: { email, nombre, role: 'ADMIN', password_hash: null, google_id: null }
+      });
+      console.log(`${usuario.email} configurado como ADMIN`);
     }
 
     process.exit(0);

@@ -12,6 +12,7 @@ RUN npm install --production
 COPY backend/ ./
 COPY backend/prisma/ ./prisma/
 
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/inventario
 RUN npx prisma generate
 
 EXPOSE 3000

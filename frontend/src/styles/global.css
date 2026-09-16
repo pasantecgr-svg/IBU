@@ -52,6 +52,16 @@ body {
   line-height: 1.6;
 }
 
+[data-theme='dark'] {
+  --gris-texto: #e6eef8;
+  --gris-fondo: #0b1020;
+  --dark: #f1f5f9;
+  --light: #111827;
+  --border: #334155;
+  --text: #e6eef8;
+  --muted: #aab7c7;
+}
+
 a {
   color: var(--primary);
   text-decoration: none;
@@ -88,6 +98,19 @@ a:hover {
   border-radius: 5px;
   margin-bottom: 15px;
   border-left: 4px solid #27ae60;
+}
+
+[data-theme='dark'] .error,
+[data-theme='dark'] .error-message {
+  background-color: #3b1d25;
+  color: #fecdd3;
+  border-left-color: #fb7185;
+}
+
+[data-theme='dark'] .success-message {
+  background-color: #123329;
+  color: #bbf7d0;
+  border-left-color: #34d399;
 }
 
 .sin-resultados,

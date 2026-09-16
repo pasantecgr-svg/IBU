@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { categoriasAPI } from '../utils/api';
+import { Check, Pencil, Plus, Tags, Trash2, X } from 'lucide-react';
 import '../styles/categorias.css';
 
 export default function GestionCategorias() {
+  const usuario = useSelector((state) => state.auth.user);
+  const isAdmin = usuario?.role === 'ADMIN';
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,17 +35,18 @@ export default function GestionCategorias() {
     e.preventDefault();
 
     if (!nuevaCategoria.trim()) {
-      alert('El nombre de la categoría es requerido');
+      setError('El nombre de la categoría es requerido');
       return;
     }
 
     try {
+      setError(null);
       await categoriasAPI.crear({ nombre: nuevaCategoria });
-      alert('✅ Categoría creada exitosamente');
       setNuevaCategoria('');
       cargarCategorias();
     } catch (err) {
-      alert('Error al crear categoría: ' + err.message);
+      setError('Error al crear categoría: ' + err.message);
+      console.error(err.message);
     }
   };
 
@@ -52,17 +57,18 @@ export default function GestionCategorias() {
 
   const handleGuardarEdicion = async (id) => {
     if (!textEdicion.trim()) {
-      alert('El nombre es requerido');
+      setError('El nombre es requerido');
       return;
     }
 
     try {
+      setError(null);
       await categoriasAPI.actualizar(id, { nombre: textEdicion });
-      alert('✅ Categoría actualizada');
       setEditando(null);
       cargarCategorias();
     } catch (err) {
-      alert('Error al actualizar: ' + err.message);
+      setError('Error al actualizar: ' + err.message);
+      console.error(err.message);
     }
   };
 
@@ -70,10 +76,10 @@ export default function GestionCategorias() {
     if (window.confirm('¿Estás seguro de eliminar esta categoría?')) {
       try {
         await categoriasAPI.eliminar(id);
-        alert('✅ Categoría eliminada');
         cargarCategorias();
       } catch (err) {
-        alert('Error: ' + err.message);
+        setError('Error: ' + err.message);
+        console.error(err.message);
       }
     }
   };
@@ -82,25 +88,27 @@ export default function GestionCategorias() {
 
   return (
     <div className="gestion-categorias">
-      <h2>🏷️ Gestión de Categorías</h2>
+      <h2><Tags size={22} aria-hidden="true" /> Gestión de Categorías</h2>
 
-      <div className="crear-categoria">
-        <h3>Crear Nueva Categoría</h3>
-        <form onSubmit={handleCrear} className="form-categoria">
-          <div className="form-group">
-            <input
-              type="text"
-              value={nuevaCategoria}
-              onChange={(e) => setNuevaCategoria(e.target.value)}
-              placeholder="ej: Switches, Routers, Cables..."
-              className="form-input"
-            />
-          </div>
-          <button type="submit" className="btn btn-primary">
-            ➕ Crear Categoría
-          </button>
-        </form>
-      </div>
+      {isAdmin && (
+        <div className="crear-categoria">
+          <h3>Crear Nueva Categoría</h3>
+          <form onSubmit={handleCrear} className="form-categoria">
+            <div className="form-group">
+              <input
+                type="text"
+                value={nuevaCategoria}
+                onChange={(e) => setNuevaCategoria(e.target.value)}
+                placeholder="ej: Switches, Routers, Cables..."
+                className="form-input"
+              />
+            </div>
+            <button type="submit" className="btn btn-primary">
+              <Plus size={17} aria-hidden="true" /> Crear Categoría
+            </button>
+          </form>
+        </div>
+      )}
 
       <div className="categorias-list">
         <h3>Categorías Existentes</h3>
@@ -110,7 +118,7 @@ export default function GestionCategorias() {
           <div className="categorias-grid">
             {categorias.map((categoria) => (
               <div key={categoria.id} className="categoria-card">
-                {editando === categoria.id ? (
+                {isAdmin && editando === categoria.id ? (
                   <div className="edicion-content">
                     <input
                       type="text"
@@ -123,35 +131,37 @@ export default function GestionCategorias() {
                         onClick={() => handleGuardarEdicion(categoria.id)}
                         className="btn-save"
                       >
-                        ✅ Guardar
+                        <Check size={16} aria-hidden="true" /> Guardar
                       </button>
                       <button
                         onClick={() => setEditando(null)}
                         className="btn-cancel"
                       >
-                        ❌ Cancelar
+                        <X size={16} aria-hidden="true" /> Cancelar
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="categoria-content">
                     <h4>{categoria.nombre}</h4>
-                    <div className="categoria-actions">
-                      <button
-                        onClick={() => handleEditar(categoria)}
-                        className="btn-edit"
-                        title="Editar"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => handleEliminar(categoria.id)}
-                        className="btn-delete"
-                        title="Eliminar"
-                      >
-                        🗑️
-                      </button>
-                    </div>
+                    {isAdmin && (
+                      <div className="categoria-actions">
+                        <button
+                          onClick={() => handleEditar(categoria)}
+                          className="btn-edit"
+                          title="Editar"
+                        >
+                          <Pencil size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                          onClick={() => handleEliminar(categoria.id)}
+                          className="btn-delete"
+                          title="Eliminar"
+                        >
+                          <Trash2 size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

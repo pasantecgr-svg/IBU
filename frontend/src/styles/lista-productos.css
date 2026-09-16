@@ -19,6 +19,38 @@
   box-shadow: 0 2px 8px rgba(122, 82, 0, 0.08);
 }
 
+[data-theme='dark'] .lista-productos,
+[data-theme='dark'] .tabla-productos {
+  color: var(--text);
+}
+
+[data-theme='dark'] .tabla-productos,
+[data-theme='dark'] .tabla-productos thead,
+[data-theme='dark'] .tabla-productos tbody tr,
+[data-theme='dark'] .filtros-container {
+  background: var(--card);
+}
+
+[data-theme='dark'] .tabla-productos th,
+[data-theme='dark'] .tabla-productos td {
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme='dark'] .input-busqueda,
+[data-theme='dark'] .select-categoria,
+[data-theme='dark'] .input-edicion {
+  background: #111827;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme='dark'] .alerta-stock {
+  background: #342914;
+  border-color: #765b20;
+  color: #fde68a;
+}
+
 .alerta-stock strong {
   display: block;
   margin-bottom: 6px;
@@ -28,6 +60,59 @@
   margin: 0;
   padding-left: 18px;
 }
+
+.importador-productos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 90%, var(--primary) 10%);
+}
+
+.importador-copy,
+.importador-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.importador-copy { color: var(--primary); }
+.importador-copy div { display: grid; gap: 2px; }
+.importador-copy strong { color: var(--text); font-size: 14px; }
+.importador-copy span { color: var(--muted); font-size: 12px; }
+.import-file-label { position: relative; overflow: hidden; }
+.import-file-label input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.carga-rollos {
+  margin: -8px 0 22px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 94%, var(--primary) 6%);
+}
+.carga-rollos-heading,
+.metrajes-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.carga-rollos-heading h3 { margin: 0; color: var(--text); font-size: 16px; }
+.carga-rollos-heading p { margin: 3px 0 14px; color: var(--muted); font-size: 12px; }
+.carga-rollos-form { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; }
+.carga-rollos-form label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.carga-rollos-form input,
+.carga-rollos-form select { padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); }
+.metrajes-rollos { grid-column: 1 / -1; display: grid; gap: 8px; }
+.metrajes-heading { font-size: 13px; color: var(--text); }
+.metrajes-heading span { color: var(--muted); font-size: 12px; }
+.metraje-row { display: grid; grid-template-columns: 90px minmax(120px, 260px) 32px; align-items: center; gap: 8px; }
+.metraje-row span { color: var(--muted); font-size: 12px; }
+.metraje-row .btn-icon { color: var(--danger); }
+.carga-rollos-form > .btn-primary { grid-column: 1 / -1; width: max-content; }
+
+[data-theme='dark'] .carga-rollos { background: #111827; }
+[data-theme='dark'] .carga-rollos-form input,
+[data-theme='dark'] .carga-rollos-form select { background: #0b1220; }
 
 /* Filtros */
 .filtros-container {
@@ -248,6 +333,29 @@
   box-shadow: var(--shadow);
 }
 
+[data-theme='dark'] .input-busqueda,
+[data-theme='dark'] .select-categoria,
+[data-theme='dark'] .input-edicion,
+[data-theme='dark'] .tabla-info,
+[data-theme='dark'] .tabla-productos,
+[data-theme='dark'] .tabla-productos tbody tr,
+[data-theme='dark'] .tabla-productos tbody tr:hover {
+  background-color: #111827;
+  color: var(--text);
+}
+
+[data-theme='dark'] .tabla-productos tbody tr.estado-dañado {
+  background-color: #3b1d25;
+}
+
+[data-theme='dark'] .tabla-productos tbody tr.estado-reparacion {
+  background-color: #172b46;
+}
+
+[data-theme='dark'] .producto-thumb.placeholder {
+  background: #334155;
+}
+
 .tabla-info p {
   margin: 0;
   color: var(--text);
@@ -267,6 +375,10 @@
 }
 
 @media (max-width: 768px) {
+  .importador-productos { align-items: stretch; flex-direction: column; }
+  .importador-actions { flex-wrap: wrap; }
+  .carga-rollos-form { grid-template-columns: 1fr; }
+  .carga-rollos-form > .btn-primary { width: 100%; }
   .filtros-container {
     flex-direction: column;
   }

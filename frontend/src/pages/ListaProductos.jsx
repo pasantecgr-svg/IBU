@@ -1,66 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { productosAPI, categoriasAPI } from '../utils/api';
+import { productosAPI, categoriasAPI, usuariosAPI } from '../utils/api';
+import { Check, Download, FileSpreadsheet, Minus, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import '../styles/lista-productos.css';
 
-const STOCK_MINIMO_ALERTA = 5;
-
-const obtenerProductosBajos = (lista) => {
-  return (lista || []).filter((producto) => {
-    const cantidad = Number(producto.cantidad_disponible ?? 0);
-    return cantidad > 0 && cantidad <= STOCK_MINIMO_ALERTA;
-  });
-};
-
 export default function ListaProductos({ onEditar }) {
-  const usuario = useSelector((state) => state.auth.user);
-  const isAdmin = usuario && usuario.role === 'ADMIN';
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [alertaStock, setAlertaStock] = useState([]);
   const [filtros, setFiltros] = useState({
     categoria: '',
+    dependencia: '',
     busqueda: ''
   });
+  const [dependencias, setDependencias] = useState([]);
   const [mostrarEdicion, setMostrarEdicion] = useState(null);
   const [edicion, setEdicion] = useState({});
+  const [importando, setImportando] = useState(false);
 
   useEffect(() => {
     cargarDatos();
   }, [filtros]);
 
-  const notificarStockBajo = (productosActuales) => {
-    const bajos = obtenerProductosBajos(productosActuales);
-    if (bajos.length === 0) return;
-
-    const mensaje = bajos
-      .map((producto) => `${producto.nombre} (${producto.cantidad_disponible} uds.)`)
-      .join(', ');
-
-    try {
-      if ('Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification('⚠️ Stock bajo', {
-            body: `Quedan pocas unidades: ${mensaje}`
-          });
-        } else if (Notification.permission === 'default') {
-          Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-              new Notification('⚠️ Stock bajo', {
-                body: `Quedan pocas unidades: ${mensaje}`
-              });
-            }
-          });
-        }
-      }
-    } catch (error) {
-      console.error('No se pudo enviar la notificación del stock bajo:', error);
-    }
-
-    alert(`⚠️ Stock bajo: ${mensaje}`);
-  };
+  useEffect(() => {
+    usuariosAPI.dependencias().then(({ data }) => setDependencias(data.dependencias || [])).catch((err) => console.error('Error cargando dependencias:', err));
+  }, []);
 
   const cargarDatos = async () => {
     try {
@@ -71,7 +35,6 @@ export default function ListaProductos({ onEditar }) {
       ]);
       const listaProductos = productosRes.data.productos || [];
       setProductos(listaProductos);
-      setAlertaStock(obtenerProductosBajos(listaProductos));
       setCategorias(categoriasRes.data.categorias || []);
     } catch (err) {
       setError(err.message);
@@ -85,10 +48,9 @@ export default function ListaProductos({ onEditar }) {
     if (window.confirm('¿Estás seguro de eliminar este producto?')) {
       try {
         await productosAPI.eliminar(id);
-        alert('Producto eliminado exitosamente');
         cargarDatos();
       } catch (err) {
-        alert('Error al eliminar: ' + err.message);
+        console.error(err.response?.data?.error || 'Error al eliminar el producto');
       }
     }
   };
@@ -100,16 +62,11 @@ export default function ListaProductos({ onEditar }) {
 
   const handleGuardarEdicion = async (id) => {
     try {
-      const response = await productosAPI.actualizar(id, edicion);
-      const productoActualizado = response.data.producto;
-      if (productoActualizado && Number(productoActualizado.cantidad_disponible ?? 0) <= STOCK_MINIMO_ALERTA) {
-        notificarStockBajo([productoActualizado]);
-      }
-      alert('Producto actualizado exitosamente');
+      await productosAPI.actualizar(id, edicion);
       setMostrarEdicion(null);
       cargarDatos();
     } catch (err) {
-      alert('Error al actualizar: ' + err.message);
+      console.error('Error al actualizar: ' + err.message);
     }
   };
 
@@ -120,14 +77,39 @@ export default function ListaProductos({ onEditar }) {
 
   const handleCambiarCantidad = async (id, cantidadDisponible) => {
     try {
-      const response = await productosAPI.actualizarCantidad(id, cantidadDisponible);
-      const productoActualizado = response.data.producto;
-      if (productoActualizado && Number(productoActualizado.cantidad_disponible ?? 0) <= STOCK_MINIMO_ALERTA) {
-        notificarStockBajo([productoActualizado]);
-      }
+      await productosAPI.actualizarCantidad(id, cantidadDisponible);
       cargarDatos();
     } catch (err) {
-      alert('Error al actualizar cantidad: ' + err.message);
+      console.error('Error al actualizar cantidad: ' + err.message);
+    }
+  };
+
+  const descargarPlantilla = async () => {
+    try {
+      const { data } = await productosAPI.descargarPlantilla();
+      const url = window.URL.createObjectURL(data);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = 'plantilla_productos.xlsx';
+      enlace.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('No se pudo descargar la plantilla: ' + err.message);
+    }
+  };
+
+  const importarArchivo = async (event) => {
+    const archivo = event.target.files?.[0];
+    event.target.value = '';
+    if (!archivo) return;
+    try {
+      setImportando(true);
+      await productosAPI.importar(archivo);
+      await cargarDatos();
+    } catch (err) {
+      console.error(err.response?.data?.error || 'No se pudo importar el archivo');
+    } finally {
+      setImportando(false);
     }
   };
 
@@ -136,25 +118,31 @@ export default function ListaProductos({ onEditar }) {
 
   return (
     <div className="lista-productos">
-      <h2>📋 Lista de Productos</h2>
+      <h2><Search size={22} aria-hidden="true" /> Lista de Productos</h2>
 
-      {alertaStock.length > 0 && (
-        <div className="alerta-stock">
-          <strong>⚠️ Stock bajo:</strong>
-          <ul>
-            {alertaStock.map((producto) => (
-              <li key={producto.id}>
-                {producto.nombre}: {producto.cantidad_disponible} unidades disponibles
-              </li>
-            ))}
-          </ul>
+      <section className="importador-productos">
+        <div className="importador-copy">
+          <FileSpreadsheet size={21} aria-hidden="true" />
+          <div>
+            <strong>Carga masiva de productos</strong>
+            <span>Usa la plantilla para registrar varios productos de una vez.</span>
+          </div>
         </div>
-      )}
+        <div className="importador-actions">
+          <button type="button" className="btn btn-outline" onClick={descargarPlantilla}>
+            <Download size={16} aria-hidden="true" /> Descargar plantilla
+          </button>
+          <label className="btn btn-primary import-file-label">
+            <Upload size={16} aria-hidden="true" /> {importando ? 'Importando...' : 'Subir plantilla'}
+            <input type="file" accept=".xlsx,.xls" onChange={importarArchivo} disabled={importando} />
+          </label>
+        </div>
+      </section>
 
       <div className="filtros-container">
         <input
           type="text"
-          placeholder="🔍 Buscar por nombre, modelo o serie..."
+          placeholder="Buscar por nombre, modelo o serie..."
           value={filtros.busqueda}
           onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
           className="input-busqueda"
@@ -172,6 +160,15 @@ export default function ListaProductos({ onEditar }) {
             </option>
           ))}
         </select>
+
+        <select
+          value={filtros.dependencia}
+          onChange={(e) => setFiltros({ ...filtros, dependencia: e.target.value })}
+          className="select-categoria"
+        >
+          <option value="">Todas las dependencias</option>
+          {dependencias.map((dependencia) => <option key={dependencia.id} value={dependencia.id}>{dependencia.nombre}</option>)}
+        </select>
       </div>
 
       <div className="tabla-responsiva">
@@ -180,13 +177,14 @@ export default function ListaProductos({ onEditar }) {
             <tr>
               <th>Nombre</th>
               <th>Categoría</th>
+              <th>Dependencia</th>
               <th>Marca/Modelo</th>
               <th>Total</th>
               <th>Disponible</th>
               <th>Ubicación</th>
                 <th>Estado</th>
                 <th>Activo Fijo</th>
-                {isAdmin && <th>Acciones</th>}
+                <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -204,6 +202,7 @@ export default function ListaProductos({ onEditar }) {
                         />
                       </td>
                       <td>{producto.categorias?.nombre}</td>
+                      <td>{producto.dependencia_nombre || '-'}</td>
                       <td>
                         <input
                           type="text"
@@ -263,13 +262,13 @@ export default function ListaProductos({ onEditar }) {
                           className="btn-guardar"
                           onClick={() => handleGuardarEdicion(producto.id)}
                         >
-                          ✅ Guardar
+                          <Check size={16} aria-hidden="true" /> Guardar
                         </button>
                         <button
                           className="btn-cancelar"
                           onClick={handleCancelEdicion}
                         >
-                          ❌ Cancelar
+                          <X size={16} aria-hidden="true" /> Cancelar
                         </button>
                       </td>
                     </>
@@ -284,33 +283,26 @@ export default function ListaProductos({ onEditar }) {
                         <strong>{producto.nombre}</strong>
                       </td>
                       <td>{producto.categorias?.nombre || 'N/A'}</td>
+                      <td>{producto.dependencia_nombre || 'Sin asignar'}</td>
                       <td>{producto.marca || '-'} / {producto.modelo || '-'}</td>
                       <td className="cantidad-total">{producto.cantidad_total}</td>
                       <td>
                         <div className="cantidad-disponible">
-                          {isAdmin ? (
-                            <>
-                              <button
-                                onClick={() => handleCambiarCantidad(producto.id, Math.max(0, producto.cantidad_disponible - 1))}
-                                className="btn-cantidad"
-                              >
-                                −
-                              </button>
-                              <span className={producto.cantidad_disponible === 0 ? 'sin-stock' : ''}>
-                                {producto.cantidad_disponible}
-                              </span>
-                              <button
-                                onClick={() => handleCambiarCantidad(producto.id, Math.min(producto.cantidad_total, producto.cantidad_disponible + 1))}
-                                className="btn-cantidad"
-                              >
-                                +
-                              </button>
-                            </>
-                          ) : (
-                            <span className={producto.cantidad_disponible === 0 ? 'sin-stock' : ''}>
-                              {producto.cantidad_disponible}
-                            </span>
-                          )}
+                          <button
+                            onClick={() => handleCambiarCantidad(producto.id, Math.max(0, producto.cantidad_disponible - 1))}
+                            className="btn-cantidad"
+                          >
+                            <Minus size={15} aria-hidden="true" />
+                          </button>
+                          <span className={producto.cantidad_disponible === 0 ? 'sin-stock' : ''}>
+                            {producto.cantidad_disponible}
+                          </span>
+                          <button
+                            onClick={() => handleCambiarCantidad(producto.id, Math.min(producto.cantidad_total, producto.cantidad_disponible + 1))}
+                            className="btn-cantidad"
+                          >
+                            <Plus size={15} aria-hidden="true" />
+                          </button>
                         </div>
                       </td>
                       <td>{producto.ubicacion || 'Almacén'}</td>
@@ -326,31 +318,29 @@ export default function ListaProductos({ onEditar }) {
                           <span className="muted">-</span>
                         )}
                       </td>
-                      {isAdmin && (
-                        <td className="acciones">
-                          <button
-                            className="btn-accion edit"
-                            onClick={() => handleEditarClick(producto)}
-                            title="Editar"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className="btn-accion delete"
-                            onClick={() => handleEliminar(producto.id)}
-                            title="Eliminar"
-                          >
-                            🗑️
-                          </button>
-                        </td>
-                      )}
+                      <td className="acciones">
+                        <button
+                          className="btn-accion edit"
+                          onClick={() => handleEditarClick(producto)}
+                          title="Editar"
+                        >
+                          <Pencil size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                          className="btn-accion delete"
+                          onClick={() => handleEliminar(producto.id)}
+                          title="Eliminar"
+                        >
+                          <Trash2 size={16} aria-hidden="true" />
+                        </button>
+                      </td>
                     </>
                   )}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={isAdmin ? 9 : 8} className="sin-resultados">
+                <td colSpan={10} className="sin-resultados">
                   No hay productos que mostrar
                 </td>
               </tr>

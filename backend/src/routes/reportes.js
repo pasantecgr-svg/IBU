@@ -1,24 +1,25 @@
 import express from 'express';
 import {
   generarReportePDF,
+  generarOrdenPDF,
   generarReporteExcel,
   obtenerEstadisticas,
   exportOrdenesExcel,
   exportOrdenesCSV
 } from '../controllers/reportesController.js';
-import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 router.use(requireAuth);
 
 // Reportes
 router.get('/pdf', generarReportePDF);
+router.get('/ordenes/:id/pdf', generarOrdenPDF);
 router.get('/excel', generarReporteExcel);
 // Exportar órdenes de trabajo
-router.get('/ordenes/excel', requireRole(['ADMIN']), exportOrdenesExcel);
-router.get('/ordenes/csv', requireRole(['ADMIN']), exportOrdenesCSV);
+router.get('/ordenes/excel', exportOrdenesExcel);
+router.get('/ordenes/csv', exportOrdenesCSV);
 
-// Estadísticas (dashboard) solo ADMIN
-router.get('/estadisticas', requireRole(['ADMIN']), obtenerEstadisticas);
+router.get('/estadisticas', obtenerEstadisticas);
 
 export default router;

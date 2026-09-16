@@ -43,6 +43,8 @@ model productos {
   ubicacion           String?
   estado              String?
   activo_fijo         String?  // número o código de activo fijo (opcional)
+  dependencia_codigo  String?
+  dependencia_nombre  String?
   stock_estado        String?   @default("normal")
   fecha_adquisicion   DateTime? @db.Date
   foto_url            String?

@@ -3,6 +3,14 @@ Mejores prácticas para gestionar secretos y variables de entorno
 1) Nunca subir `.env` al repositorio
 - Mantén valores reales sólo en archivos locales (`.env`, `backend/.env.local`) que estén en `.gitignore`.
 - Sube un `backend/.env.example` con placeholders como referencia (ya creado).
+- Si una credencial fue compartida, considérala comprometida y rótala; ignorar el archivo después no invalida una clave ya expuesta.
+
+Variables obligatorias para arrancar de forma segura:
+- `DATABASE_URL`
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+- `JWT_SECRET` con mínimo 32 caracteres aleatorios
+- `CORS_ORIGINS` con los orígenes frontend autorizados
+- credenciales de Google, SMTP y middleware cuando esas integraciones estén habilitadas.
 
 2) Para Docker / producción: usa un gestor de secretos o Docker Secrets
 - Docker Compose (producción): monta secretos desde archivos que no estén en Git o usa un secret manager.

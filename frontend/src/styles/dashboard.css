@@ -14,6 +14,9 @@
 }
 
 .dashboard h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   color: var(--dark);
   margin-bottom: 30px;
   font-size: 28px;
@@ -29,8 +32,8 @@
 }
 
 .stat-card {
-  background: white;
-  border-radius: 10px;
+  background: var(--card);
+  border-radius: 12px;
   padding: 25px;
   box-shadow: var(--shadow);
   transition: all 0.3s ease;
@@ -84,14 +87,17 @@
 
 /* Stats Section */
 .stats-section {
-  background: white;
-  border-radius: 10px;
+  background: var(--card);
+  border-radius: 12px;
   padding: 30px;
   margin-bottom: 30px;
   box-shadow: var(--shadow);
 }
 
 .stats-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--dark);
   margin-bottom: 20px;
   font-size: 18px;
@@ -116,6 +122,37 @@
   border-radius: 8px;
   background: #fff8e1;
   border: 1px solid #f5d98d;
+}
+
+[data-theme='dark'] .stat-card,
+[data-theme='dark'] .stats-section {
+  background: var(--card);
+  color: var(--text);
+}
+
+[data-theme='dark'] .stat-content h3,
+[data-theme='dark'] .stats-section h3,
+[data-theme='dark'] .stock-alert-item small {
+  color: var(--muted);
+}
+
+[data-theme='dark'] .stock-alert-item {
+  background: #342914;
+  border-color: #765b20;
+}
+
+[data-theme='dark'] .actions-section,
+[data-theme='dark'] .category-item {
+  background: #111827;
+  color: var(--text);
+}
+
+[data-theme='dark'] .category-item:hover {
+  background: #18263a;
+}
+
+[data-theme='dark'] .category-name {
+  color: var(--text);
 }
 
 .stock-alert-item strong {
@@ -146,14 +183,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 15px;
-  background-color: #f8f9fa;
+  background-color: color-mix(in srgb, var(--card) 86%, var(--primary) 14%);
   border-radius: 8px;
   border-left: 4px solid var(--primary);
   transition: all 0.2s ease;
 }
 
 .category-item:hover {
-  background-color: #ecf0f1;
+  background-color: color-mix(in srgb, var(--card) 76%, var(--primary) 24%);
   transform: translateX(5px);
 }
 
@@ -173,8 +210,8 @@
 
 /* Actions Section */
 .actions-section {
-  background: white;
-  border-radius: 10px;
+  background: var(--card);
+  border-radius: 12px;
   padding: 30px;
   box-shadow: var(--shadow);
 }

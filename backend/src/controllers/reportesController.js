@@ -81,6 +81,44 @@ export const generarReportePDF = async (req, res) => {
   }
 };
 
+export const generarOrdenPDF = async (req, res) => {
+  try {
+    const orden = await prisma.ordenes_trabajo.findUnique({
+      where: { id: req.params.id },
+      include: { items: { include: { productos: true } }, usuario: true }
+    });
+    if (!orden) return res.status(404).json({ success: false, error: 'Orden no encontrada' });
+
+    const numero = orden.numero || String(orden.secuencia);
+    const doc = new PDFDocument({ margin: 50 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="orden_trabajo_${numero}.pdf"`);
+    doc.pipe(res);
+    doc.fontSize(20).font('Helvetica-Bold').text(`ORDEN DE TRABAJO N.º ${numero}`, { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(11).font('Helvetica').text(`Título: ${orden.titulo}`);
+    doc.text(`Descripción: ${orden.descripcion || 'Sin descripción'}`);
+    doc.text(`Ticket Mantis: ${orden.mantis_ticket || 'No registrado'}`);
+    doc.text(`Creada por: ${orden.usuario?.email || 'Usuario'}`);
+    doc.text(`Fecha: ${new Date(orden.created_at).toLocaleString('es-CO')}`);
+    doc.moveDown();
+    doc.fontSize(13).font('Helvetica-Bold').text('PRODUCTOS UTILIZADOS');
+    doc.moveDown(0.5);
+    doc.fontSize(10).font('Helvetica');
+    for (const item of orden.items || []) {
+      const producto = item.productos?.nombre || 'Producto no disponible';
+      const consumo = [`Cantidad: ${item.cantidad || 0}`, `Metraje: ${item.metraje_usado || 0} ${item.productos?.unidad || 'm'}`].join(' | ');
+      doc.text(`${producto} - ${consumo}`);
+      if (item.cable_descripcion) doc.text(`  Detalle: ${item.cable_descripcion}`);
+      doc.moveDown(0.3);
+    }
+    doc.end();
+  } catch (error) {
+    console.error('Error generarOrdenPDF:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 // Generar reporte Excel
 export const generarReporteExcel = async (req, res) => {
   try {
@@ -218,7 +256,7 @@ export const obtenerEstadisticas = async (req, res) => {
 
     // Metraje bajo: criterio por defecto <=10 metros o <=10% restante
     const metrajeBajo = productos
-      .filter((producto) => typeof producto.metraje_restante === 'number' && producto.metraje_restante > 0)
+      .filter((producto) => typeof producto.metraje_restante === 'number' && producto.metraje_restante >= 0 && typeof producto.metraje_total === 'number' && producto.metraje_total > 0)
       .filter((producto) => {
         const restante = producto.metraje_restante || 0;
         const total = producto.metraje_total || 0;

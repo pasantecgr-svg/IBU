@@ -30,6 +30,12 @@ export const productosAPI = {
   obtener: (params) => api.get('/productos', { params }),
   obtenerPorId: (id) => api.get(`/productos/${id}`),
   crear: (data) => api.post('/productos', data),
+  descargarPlantilla: () => api.get('/productos/plantilla', { responseType: 'blob' }),
+  importar: (archivo) => {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    return api.post('/productos/importar', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
   actualizar: (id, data) => api.put(`/productos/${id}`, data),
   eliminar: (id) => api.delete(`/productos/${id}`),
   actualizarCantidad: (id, cantidad_disponible) => 
@@ -61,6 +67,7 @@ export const archivosAPI = {
 
 // REPORTES
 export const reportesAPI = {
+  generarOrdenPDF: (id) => api.get(`/reportes/ordenes/${id}/pdf`, { responseType: 'blob' }),
   generarPDF: (categoria_id) => {
     const params = categoria_id ? `?categoria_id=${categoria_id}` : '';
     return api.get(`/reportes/pdf${params}`, { responseType: 'blob' }).then(async (response) => {
@@ -95,16 +102,25 @@ export const reportesAPI = {
   obtenerEstadisticas: () => api.get('/reportes/estadisticas')
 };
 
+export const notificacionesAPI = {
+  obtener: () => api.get('/notificaciones')
+};
+
 // ORDENES DE TRABAJO
 export const ordenesAPI = {
   crear: (data) => api.post('/ordenes', data),
   obtener: () => api.get('/ordenes'),
-  obtenerPorId: (id) => api.get(`/ordenes/${id}`)
+  obtenerPorId: (id) => api.get(`/ordenes/${id}`),
+  actualizar: (id, data) => api.put(`/ordenes/${id}`, data),
+  eliminar: (id) => api.delete(`/ordenes/${id}`)
 };
 
 // USUARIOS (ADMIN)
 export const usuariosAPI = {
   listar: () => api.get('/usuarios'),
+  g3: () => api.get('/usuarios/g3'),
+  dependencias: () => api.get('/usuarios/dependencias'),
+  organigrama: () => api.get('/usuarios/organigrama'),
   actualizarRol: (id, role) => api.put(`/usuarios/${id}/role`, { role })
 };
 

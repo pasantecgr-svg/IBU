@@ -4,6 +4,127 @@
   animation: fadeIn 0.3s ease;
 }
 
+.admin-usuarios-page{padding:24px;animation:fadeIn .3s ease}.admin-usuarios-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}.admin-usuarios-header h2{margin:6px 0;color:var(--dark)}.admin-usuarios-header p{margin:0;color:var(--muted);font-size:13px}.eyebrow{color:var(--primary);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.g3-count{padding:8px 12px;border-radius:999px;background:var(--primary);color:#fff;font-size:12px;font-weight:700}.usuarios-panel{padding:20px;margin-bottom:20px;border:1px solid var(--border);border-radius:10px;background:var(--card);box-shadow:var(--shadow)}.usuarios-panel h3{margin:0 0 14px;color:var(--text)}.tabla-scroll{overflow-x:auto}.usuarios-tabla{min-width:760px}.usuarios-tabla td,.usuarios-tabla th{padding:12px}.cargo-badge{display:inline-block;max-width:260px;padding:5px 8px;border-radius:6px;background:color-mix(in srgb,var(--card) 75%,var(--primary) 25%);color:var(--text);font-size:12px}.usuarios-locales{margin-top:24px}@media(max-width:700px){.admin-usuarios-page{padding:16px}.admin-usuarios-header{flex-direction:column}}
+
+[data-theme='dark'] .formulario-container,
+[data-theme='dark'] .form-section {
+  color: var(--text);
+}
+
+[data-theme='dark'] .form-section {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+[data-theme='dark'] .form-input,
+[data-theme='dark'] .form-textarea {
+  background: #111827;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.formulario-carga-rollos {
+  margin-bottom: 22px;
+}
+
+.formulario-carga-rollos .carga-rollos-form {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 12px;
+}
+
+.formulario-carga-rollos .carga-rollos-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.formulario-carga-rollos .carga-rollos-form input,
+.formulario-carga-rollos .carga-rollos-form select {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+}
+
+.formulario-carga-rollos .metrajes-rollos {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+}
+
+.formulario-carga-rollos .metrajes-heading,
+.formulario-carga-rollos .carga-rollos-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.formulario-carga-rollos .metrajes-heading {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.formulario-carga-rollos .metrajes-heading span,
+.formulario-carga-rollos .carga-rollos-heading p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.formulario-carga-rollos .carga-rollos-heading h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.formulario-carga-rollos .carga-rollos-heading p {
+  margin: 3px 0 14px;
+}
+
+.formulario-carga-rollos .metraje-row {
+  display: grid;
+  grid-template-columns: 90px minmax(120px, 260px) 32px;
+  align-items: center;
+  gap: 8px;
+}
+
+.formulario-carga-rollos .metraje-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.formulario-carga-rollos .metraje-row .btn-icon {
+  color: var(--danger);
+}
+
+.formulario-carga-rollos .carga-rollos-form > .btn-primary {
+  grid-column: 1 / -1;
+  width: max-content;
+}
+
+[data-theme='dark'] .formulario-carga-rollos {
+  background: #111827;
+}
+
+[data-theme='dark'] .formulario-carga-rollos .carga-rollos-form input,
+[data-theme='dark'] .formulario-carga-rollos .carga-rollos-form select {
+  background: #0b1220;
+}
+
+@media (max-width: 768px) {
+  .formulario-carga-rollos .carga-rollos-form {
+    grid-template-columns: 1fr;
+  }
+
+  .formulario-carga-rollos .carga-rollos-form > .btn-primary {
+    width: 100%;
+  }
+}
+
 .formulario-container h2 {
   color: var(--dark);
   margin-bottom: 30px;
@@ -238,4 +359,25 @@
     max-width: 200px;
     max-height: 200px;
   }
+}
+
+/* Override fixed light surfaces when dark theme is active. */
+[data-theme='dark'] .formulario-producto,
+[data-theme='dark'] .form-actions {
+  background: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme='dark'] .form-section {
+  border-color: var(--border);
+}
+
+[data-theme='dark'] .form-input,
+[data-theme='dark'] .form-textarea,
+[data-theme='dark'] .form-input:focus,
+[data-theme='dark'] .form-textarea:focus {
+  background-color: #111827;
+  color: var(--text);
+  border-color: var(--border);
 }

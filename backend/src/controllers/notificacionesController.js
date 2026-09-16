@@ -1,6 +1,41 @@
 import prisma from '../utils/dbClient.js';
 import { enviarAlertaStockBajo } from '../utils/emailService.js';
 
+export const obtenerNotificaciones = async (req, res) => {
+  try {
+    const productos = await prisma.productos.findMany({
+      include: { categorias: true },
+      orderBy: { updated_at: 'desc' }
+    });
+    const notificaciones = [];
+    for (const producto of productos) {
+      const bajoCantidad = producto.cantidad_disponible > 0 && producto.cantidad_disponible <= 5;
+      const bajoMetraje = typeof producto.metraje_restante === 'number'
+        && typeof producto.metraje_total === 'number'
+        && producto.metraje_total > 0
+        && (producto.metraje_restante <= 10 || producto.metraje_restante / producto.metraje_total <= 0.1);
+      if (bajoCantidad || bajoMetraje) {
+        const detalles = [];
+        if (bajoCantidad) detalles.push(`${producto.cantidad_disponible} unidades disponibles`);
+        if (bajoMetraje) detalles.push(`${producto.metraje_restante} ${producto.unidad || 'metros'} restantes`);
+        notificaciones.push({
+          id: `stock-${producto.id}`,
+          tipo: producto.cantidad_disponible === 0 || producto.metraje_restante === 0 ? 'agotado' : 'stock_bajo',
+          titulo: producto.cantidad_disponible === 0 || producto.metraje_restante === 0 ? 'Producto agotado' : 'Stock bajo',
+          mensaje: `${producto.nombre}: ${detalles.join(' y ')}.`,
+          producto_id: producto.id,
+          categoria: producto.categorias?.nombre || 'Sin categoría',
+          updated_at: producto.updated_at
+        });
+      }
+    }
+    res.json({ success: true, notificaciones });
+  } catch (error) {
+    console.error('Error obtenerNotificaciones:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 export const enviarNotificacionOrden = async (req, res) => {
   try {
     const { id } = req.params;
@@ -28,4 +63,4 @@ export const enviarNotificacionOrden = async (req, res) => {
   }
 };
 
-export default { enviarNotificacionOrden };
+export default { enviarNotificacionOrden, obtenerNotificaciones };

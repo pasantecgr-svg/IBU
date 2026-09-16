@@ -11,7 +11,7 @@
 
 /* Crear Categoría */
 .crear-categoria {
-  background: white;
+  background: var(--card);
   border-radius: 10px;
   padding: 30px;
   margin-bottom: 30px;
@@ -49,7 +49,7 @@
 
 /* Lista de Categorías */
 .categorias-list {
-  background: white;
+  background: var(--card);
   border-radius: 10px;
   padding: 30px;
   box-shadow: var(--shadow);
@@ -69,10 +69,12 @@
 }
 
 .categoria-card {
-  background: var(--primary-gradient);
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--card) 88%, var(--primary) 12%);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary-light);
+  border-radius: 10px;
   padding: 20px;
-  color: white;
+  color: var(--text);
   box-shadow: var(--shadow);
   transition: all 0.3s ease;
   min-height: 100px;
@@ -82,6 +84,7 @@
 }
 
 .categoria-card:hover {
+  background: color-mix(in srgb, var(--card) 78%, var(--primary) 22%);
   transform: translateY(-5px);
   box-shadow: var(--shadow-lg);
 }
@@ -95,6 +98,7 @@
   font-size: 18px;
   font-weight: 700;
   word-break: break-word;
+  color: var(--text);
 }
 
 .categoria-actions {
@@ -105,9 +109,9 @@
 
 .btn-edit,
 .btn-delete {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
+  background: color-mix(in srgb, var(--card) 70%, var(--primary) 30%);
+  border: 1px solid var(--border);
+  color: var(--text);
   padding: 8px 12px;
   border-radius: 5px;
   cursor: pointer;
@@ -134,10 +138,10 @@
 .edicion-content .input-edicion {
   width: 100%;
   padding: 10px;
-  border: 2px solid white;
+  border: 2px solid var(--border);
   border-radius: 5px;
   font-size: 14px;
-  color: var(--dark);
+  color: var(--text);
   margin-bottom: 10px;
 }
 
@@ -189,6 +193,24 @@
   font-style: italic;
 }
 
+[data-theme='dark'] .gestion-categorias,
+[data-theme='dark'] .categoria-card,
+[data-theme='dark'] .crear-categoria {
+  color: var(--text);
+}
+
+[data-theme='dark'] .categoria-card,
+[data-theme='dark'] .crear-categoria {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+[data-theme='dark'] .categoria-card h4,
+[data-theme='dark'] .gestion-categorias h2,
+[data-theme='dark'] .gestion-categorias h3 {
+  color: var(--text);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .gestion-categorias h2 {
@@ -232,6 +254,29 @@
     padding: 8px;
     font-size: 13px;
   }
+}
+
+[data-theme='dark'] .categorias-list {
+  background: var(--card);
+  color: var(--text);
+}
+
+[data-theme='dark'] .crear-categoria .form-input,
+[data-theme='dark'] .edicion-content .input-edicion {
+  background: #111827;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme='dark'] .categoria-card {
+  border-left-color: #7db5f5;
+}
+
+[data-theme='dark'] .btn-edit,
+[data-theme='dark'] .btn-delete {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e6eef8;
 }
 
 @media (max-width: 480px) {

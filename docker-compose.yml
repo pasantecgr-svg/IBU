@@ -1,16 +1,14 @@
 services:
   backend:
     build:
-        context: .
-        dockerfile: ./backend/Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     env_file:
       - ./backend/.env
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/inventario
-    ports:
-      - "3001:3000"
     depends_on:
       - db
+    ports:
+      - "3001:3000"
 
   frontend:
     build:
@@ -19,20 +17,17 @@ services:
     ports:
       - "5173:80"
     environment:
-      - VITE_API_URL=http://localhost:3001
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
 
   db:
     image: postgres:16
     restart: always
-    ports:
-      - "5433:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: inventario
+    env_file:
+      - ./backend/.env
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    # La base de datos no se expone al host; la app usa el servicio interno 'db'.
 
 volumes:
   db_data:

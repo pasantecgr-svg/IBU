@@ -3,7 +3,10 @@ import jwt from 'jsonwebtoken';
 import prisma from '../utils/dbClient.js';
 import { verifyGoogleToken } from '../utils/googleOAuth.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ibu-secret-change-me';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET debe existir y tener al menos 32 caracteres');
+}
 const DOMINIO_PERMITIDO = '@unibague.edu.co';
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'cgr@unibague.edu.co,ibu@unibague.edu.co')
   .split(',')
@@ -105,11 +108,10 @@ export const googleLogin = async (req, res) => {
     const correo = normalizarEmail(payload.email);
     console.log('[Google Login] Email normalizado:', correo);
 
-    if (!correo || !correo.endsWith(DOMINIO_PERMITIDO)) {
-      console.error('[Google Login] Email rechazado por dominio:', correo);
-      return res.status(403).json({
+    if (!correo) {
+      return res.status(401).json({
         success: false,
-        error: `El inicio con Google solo está habilitado para correos ${DOMINIO_PERMITIDO}`
+        error: 'La cuenta de Google no tiene un correo válido'
       });
     }
 
@@ -140,7 +142,7 @@ export const googleLogin = async (req, res) => {
     console.error('[Google Login] Error completo:', error);
     return res.status(401).json({
       success: false,
-      error: error?.message || 'Token de Google inválido'
+      error: 'No se pudo validar la cuenta de Google. Intenta nuevamente.'
     });
   }
 };

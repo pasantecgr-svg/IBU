@@ -31,9 +31,10 @@ export const enviarAlertaStockBajo = async (producto) => {
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #f0c36d; border-radius: 12px; background: #fffdf5;">
-        <h2 style="color: #7a5200; margin-bottom: 12px;">⚠️ Alerta de stock bajo</h2>
+        <h2 style="color: #7a5200; margin-bottom: 12px;">Alerta de inventario bajo</h2>
         <p style="margin: 0 0 10px; color: #444;">El producto <strong>${producto.nombre}</strong> está llegando a su límite de inventario.</p>
         <p style="margin: 0 0 10px; color: #444;"><strong>Unidades disponibles:</strong> ${producto.cantidad_disponible}</p>
+        ${producto.metraje_restante !== null && producto.metraje_restante !== undefined ? `<p style="margin: 0 0 10px; color: #444;"><strong>Metraje restante:</strong> ${producto.metraje_restante} ${producto.unidad || 'metros'}</p>` : ''}
         <p style="margin: 0; color: #444;">Revisa la bodega o solicita una nueva compra.</p>
       </div>
     `;

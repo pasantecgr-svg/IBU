@@ -26,10 +26,13 @@ export const verifyGoogleToken = async (credential) => {
 
   try {
     console.log('[Google OAuth] Llamando a verifyIdToken...');
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: googleClientId
-    });
+    const verificacion = client.verifyIdToken({ idToken: credential, audience: googleClientId });
+    const ticket = await Promise.race([
+      verificacion,
+      new Promise((resolve, reject) => {
+        setTimeout(() => reject(new Error('La validación de Google tardó demasiado')), 8000);
+      })
+    ]);
 
     const payload = ticket.getPayload();
     console.log('[Google OAuth] Payload recibido:', payload ? { email: payload.email, sub: payload.sub, aud: payload.aud } : null);

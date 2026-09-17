@@ -126,7 +126,77 @@ const normalizarEncabezado = (valor) => String(valor || '')
   .replace(/[\u0300-\u036f]/g, '')
   .trim()
   .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '_')
+  .replace(/^_|_$/g, '')
   .replace(/\s+/g, '_');
+
+const aliasEncabezados = {
+  nombre_activo: 'nombre',
+  nombre_del_activo: 'nombre',
+  nombre_elemento: 'nombre',
+  nombre_del_bien: 'nombre',
+  nombre_del_elemento: 'nombre',
+  descripcion_activo: 'nombre',
+  descripcion_del_activo: 'nombre',
+  elemento: 'nombre',
+  equipo: 'nombre',
+  tipo_de_activo: 'categoria',
+  tipo_activo: 'categoria',
+  clase_de_activo: 'categoria',
+  categoria_activo: 'categoria',
+  categoria_del_activo: 'categoria',
+  cantidad: 'cantidad_total',
+  unidades: 'cantidad_total',
+  cantidad_de_activos: 'cantidad_total',
+  cantidad_de_unidades: 'cantidad_total',
+  cantidad_totala: 'cantidad_total',
+  cantidad_total_de_activos: 'cantidad_total',
+  cantidad_de_activos_fijos: 'cantidad_total',
+  codigo_activo: 'activo_fijo',
+  codigo: 'activo_fijo',
+  codigo_interno: 'activo_fijo',
+  codigo_de_activo: 'activo_fijo',
+  codigo_activo_fijo: 'activo_fijo',
+  codigo_de_activo_fijo: 'activo_fijo',
+  numero_activo: 'activo_fijo',
+  numero_de_activo: 'activo_fijo',
+  numero_de_activo_fijo: 'activo_fijo',
+  placa: 'activo_fijo',
+  placa_activo: 'activo_fijo',
+  serial: 'numero_serie',
+  numero_de_serie: 'numero_serie',
+  numero_serial: 'numero_serie',
+  serial_del_equipo: 'numero_serie',
+  marca_del_equipo: 'marca',
+  modelo_del_equipo: 'modelo',
+  dependencia: 'dependencia_nombre',
+  nombre_dependencia: 'dependencia_nombre',
+  codigo_dependencia: 'dependencia_codigo',
+  sede: 'ubicacion',
+  lugar: 'ubicacion',
+  observaciones: 'descripcion',
+  observacion: 'descripcion',
+  estado_del_activo: 'estado',
+  fecha_compra: 'fecha_adquisicion',
+  fecha_adquisicion_del_activo: 'fecha_adquisicion'
+};
+
+const resolverEncabezado = (valor) => {
+  const encabezado = normalizarEncabezado(valor);
+  return aliasEncabezados[encabezado] || encabezado;
+};
+
+const convertirFecha = (valor) => {
+  if (valor instanceof Date && !Number.isNaN(valor.getTime())) return valor;
+  const fecha = valor ? new Date(valor) : new Date();
+  return Number.isNaN(fecha.getTime()) ? new Date() : fecha;
+};
+
+const convertirNumero = (valor, valorPredeterminado = null) => {
+  if (valor === null || valor === undefined || String(valor).trim() === '') return valorPredeterminado;
+  const numero = Number(String(valor).replace(',', '.').replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(numero) ? numero : valorPredeterminado;
+};
 
 const normalizarNombreCategoria = (valor) => String(valor || '')
   .normalize('NFD')
@@ -190,6 +260,7 @@ export const descargarPlantillaProductos = async (req, res) => {
     { campo: 'estado', descripcion: 'Opcional: nuevo, usado, dañado o reparacion.' },
     { campo: 'fecha_adquisicion', descripcion: 'Opcional. Formato recomendado: AAAA-MM-DD.' }
   ]);
+  instrucciones.addRow({ campo: 'Encabezados alternativos', descripcion: 'También se aceptan formatos de activos con nombres como Código de activo fijo, Placa, Serial, Tipo de activo, Dependencia, Sede, Cantidad y Observaciones.' });
   instrucciones.getRow(1).font = { bold: true };
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -207,26 +278,45 @@ export const importarProductos = async (req, res) => {
     const hoja = workbook.getWorksheet('Productos') || workbook.worksheets[0];
     if (!hoja) return res.status(400).json({ success: false, error: 'El archivo no contiene una hoja de productos' });
 
-    const encabezados = {};
-    hoja.getRow(1).eachCell((cell, index) => { encabezados[normalizarEncabezado(cell.value)] = index; });
-    const faltantes = ['nombre', 'categoria', 'cantidad_total'].filter((campo) => !encabezados[campo]);
-    if (faltantes.length) return res.status(400).json({ success: false, error: `Faltan columnas obligatorias: ${faltantes.join(', ')}` });
+    let filaEncabezados = 1;
+    let encabezados = {};
+    let mejorCoincidencia = 0;
+    hoja.eachRow((row, numeroFila) => {
+      if (numeroFila > 15) return;
+      const encontrados = {};
+      row.eachCell((cell, index) => {
+        const encabezado = resolverEncabezado(cell.value);
+        if (encabezado) encontrados[encabezado] = index;
+      });
+      const coincidencias = Object.keys(encontrados).filter((campo) => columnasPlantilla.includes(campo)).length;
+      if (coincidencias > mejorCoincidencia) {
+        mejorCoincidencia = coincidencias;
+        filaEncabezados = numeroFila;
+        encabezados = encontrados;
+      }
+    });
 
     const categorias = await prisma.categorias.findMany();
     const categoriasPorNombre = new Map(categorias.map((categoria) => [normalizarNombreCategoria(categoria.nombre), categoria.id]));
+    const categoriaPredeterminada = categorias.find((categoria) => normalizarNombreCategoria(categoria.nombre) === 'activo fijo')
+      || await prisma.categorias.create({ data: { nombre: 'Activo fijo' } });
+    categoriasPorNombre.set('activo fijo', categoriaPredeterminada.id);
+    const esMatrizActivos = !encabezados.categoria || !encabezados.cantidad_total;
     const filas = [];
     const errores = [];
     hoja.eachRow((row, numeroFila) => {
-      if (numeroFila === 1) return;
-      const valor = (campo) => row.getCell(encabezados[campo] || 0).value;
+      if (numeroFila <= filaEncabezados) return;
+      const valor = (campo) => (encabezados[campo] ? row.getCell(encabezados[campo]).value : null);
       const texto = (campo) => String(valor(campo) ?? '').trim();
-      if (!texto('nombre') && !texto('categoria') && !texto('cantidad_total')) return;
-      const nombre = texto('nombre');
+      const tieneDatos = Object.values(encabezados).some((indice) => String(row.getCell(indice).value ?? '').trim() !== '');
+      if (!tieneDatos) return;
+      const nombre = texto('nombre') || texto('descripcion') || `Activo ${texto('activo_fijo')}`;
       const categoriaTexto = texto('categoria');
-      const categoria = categoriasPorNombre.get(normalizarNombreCategoria(categoriaTexto));
-      const cantidad = Number(valor('cantidad_total'));
-      const metrajeTotal = texto('metraje_total') ? Number(valor('metraje_total')) : null;
-      const metrajeRestante = texto('metraje_restante') ? Number(valor('metraje_restante')) : metrajeTotal;
+      const categoria = categoriasPorNombre.get(normalizarNombreCategoria(categoriaTexto))
+        || (esMatrizActivos ? categoriaPredeterminada.id : null);
+      const cantidad = convertirNumero(valor('cantidad_total'), 1);
+      const metrajeTotal = texto('metraje_total') ? convertirNumero(valor('metraje_total')) : null;
+      const metrajeRestante = texto('metraje_restante') ? convertirNumero(valor('metraje_restante')) : metrajeTotal;
       if (!nombre || !categoria || !Number.isInteger(cantidad) || cantidad < 1) {
         const detalleCategoria = categoriaTexto && !categoria ? ` categoría "${categoriaTexto}" no existe` : '';
         errores.push(`Fila ${numeroFila}: nombre,${detalleCategoria || ' categoría'} o cantidad_total inválidos`);
@@ -246,7 +336,7 @@ export const importarProductos = async (req, res) => {
         dependencia_codigo: texto('dependencia_codigo') || null,
         dependencia_nombre: texto('dependencia_nombre') || null,
         activo_fijo: texto('activo_fijo') || null,
-        fecha_adquisicion: texto('fecha_adquisicion') ? new Date(valor('fecha_adquisicion')) : new Date(),
+        fecha_adquisicion: convertirFecha(valor('fecha_adquisicion')),
         descripcion: texto('descripcion') || null, created_at: new Date(), updated_at: new Date()
       });
     });

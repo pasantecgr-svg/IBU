@@ -17,6 +17,7 @@ export default function ListaProductos({ onEditar }) {
   const [mostrarEdicion, setMostrarEdicion] = useState(null);
   const [edicion, setEdicion] = useState({});
   const [importando, setImportando] = useState(false);
+  const [mensajeImportacion, setMensajeImportacion] = useState('');
 
   useEffect(() => {
     cargarDatos();
@@ -104,10 +105,15 @@ export default function ListaProductos({ onEditar }) {
     if (!archivo) return;
     try {
       setImportando(true);
-      await productosAPI.importar(archivo);
+      setMensajeImportacion('');
+      const { data } = await productosAPI.importar(archivo);
+      const detalle = data.errores?.length ? ` Filas omitidas: ${data.errores.length}.` : '';
+      setMensajeImportacion(`Se importaron ${data.creados} activos correctamente.${detalle}`);
       await cargarDatos();
     } catch (err) {
-      console.error(err.response?.data?.error || 'No se pudo importar el archivo');
+      const respuesta = err.response?.data;
+      const detalle = respuesta?.errores?.length ? ` ${respuesta.errores.join(' ')}` : '';
+      setMensajeImportacion(`${respuesta?.error || 'No se pudo importar el archivo.'}${detalle}`);
     } finally {
       setImportando(false);
     }
@@ -134,10 +140,12 @@ export default function ListaProductos({ onEditar }) {
           </button>
           <label className="btn btn-primary import-file-label">
             <Upload size={16} aria-hidden="true" /> {importando ? 'Importando...' : 'Subir plantilla'}
-            <input type="file" accept=".xlsx,.xls" onChange={importarArchivo} disabled={importando} />
+            <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={importarArchivo} disabled={importando} />
           </label>
         </div>
       </section>
+
+      {mensajeImportacion && <div className="importador-mensaje" role="status">{mensajeImportacion}</div>}
 
       <div className="filtros-container">
         <input

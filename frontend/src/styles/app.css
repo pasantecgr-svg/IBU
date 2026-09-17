@@ -434,11 +434,12 @@
   font-weight: 600;
 }
 
-.login-button {
+.google-signin-button {
   margin-top: 8px;
   width: 100%;
-  border-radius: 12px;
-  font-weight: 700;
+  min-height: 44px;
+  display: flex;
+  justify-content: center;
 }
 
 .password-modal-overlay {

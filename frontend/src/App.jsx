@@ -111,6 +111,8 @@ export default function App() {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
           client_id: clientId,
+          auto_select: false,
+          ux_mode: 'popup',
           callback: async (response) => {
             try {
               const { data } = await authAPI.googleLogin({ credential: response.credential });
@@ -121,6 +123,19 @@ export default function App() {
             }
           }
         });
+        const googleButton = document.getElementById('google-signin-button');
+        if (googleButton) {
+          googleButton.replaceChildren();
+          window.google.accounts.id.renderButton(googleButton, {
+            type: 'standard',
+            theme: 'outline',
+            size: 'large',
+            text: 'signin_with',
+            shape: 'rectangular',
+            width: 320,
+            locale: 'es'
+          });
+        }
       }
     };
 
@@ -145,25 +160,6 @@ export default function App() {
     document.body.appendChild(script);
   }, [dispatch]);
 
-  
-
-  const iniciarGoogle = () => {
-    const clientId = getGoogleClientId();
-    if (!clientId || isGoogleClientPlaceholder(clientId)) {
-      setErrorLogin('Google no está configurado: reemplaza VITE_GOOGLE_CLIENT_ID en frontend/.env con un Client ID real de Google Cloud.');
-      return;
-    }
-
-    if (!window.google?.accounts?.id) {
-      setErrorLogin('Google Identity Services está bloqueado por el navegador o aún no cargó. Habilita cookies de terceros y revisa la conexión a accounts.google.com.');
-      return;
-    }
-
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) return;
-    });
-  };
-
   if (!token || !usuario) {
     return (
       <div className="login-shell">
@@ -179,9 +175,7 @@ export default function App() {
 
               {errorLogin && <div className="login-error">{errorLogin}</div>}
 
-              <button type="button" className="btn btn-primary btn-large login-button" onClick={iniciarGoogle}>
-                Continuar con Google
-              </button>
+              <div id="google-signin-button" className="google-signin-button" aria-label="Iniciar sesión con Google" />
             </div>
           </div>
         </div>

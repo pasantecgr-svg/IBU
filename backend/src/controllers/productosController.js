@@ -147,11 +147,16 @@ const normalizarEncabezado = (valor) => String(valor || '')
 
 const aliasEncabezados = {
   activo: 'activo_fijo',
+  activo_fijo: 'activo_fijo',
   descripcion: 'descripcion',
   area: 'area',
+  area_responsable: 'area',
+  responsable_area: 'area',
   fecha_de_ultimo_mantenimiento: 'fecha_ultimo_mantenimiento',
+  fecha_ultimo_mantenimiento: 'fecha_ultimo_mantenimiento',
   estado_mantenimiento: 'estado_mantenimiento',
   aporta_al_plan_de_mejoramiento: 'aporta_plan_mejoramiento',
+  aporta_plan_mejoramiento: 'aporta_plan_mejoramiento',
   nombre_activo: 'nombre',
   nombre_del_activo: 'nombre',
   nombre_elemento: 'nombre',
@@ -162,12 +167,20 @@ const aliasEncabezados = {
   elemento: 'nombre',
   equipo: 'nombre',
   tipo_de_activo: 'categoria',
+  tipo_de_bien: 'categoria',
   tipo_activo: 'categoria',
+  tipo_bien: 'categoria',
   clase_de_activo: 'categoria',
+  clasificacion: 'categoria',
+  categoria: 'categoria',
   categoria_activo: 'categoria',
   categoria_del_activo: 'categoria',
+  categoria_del_bien: 'categoria',
   cantidad: 'cantidad_total',
+  cantidad_total: 'cantidad_total',
+  total_unidades: 'cantidad_total',
   unidades: 'cantidad_total',
+  cantidad_disponible: 'cantidad_total',
   cantidad_de_activos: 'cantidad_total',
   cantidad_de_unidades: 'cantidad_total',
   cantidad_totala: 'cantidad_total',
@@ -195,15 +208,20 @@ const aliasEncabezados = {
   codigo_dependencia: 'dependencia_codigo',
   sede: 'ubicacion',
   lugar: 'ubicacion',
+  ubicacion: 'ubicacion',
   observaciones: 'descripcion',
   observacion: 'descripcion',
   estado_del_activo: 'estado',
+  estado: 'estado',
   fecha_compra: 'fecha_adquisicion',
-  fecha_adquisicion_del_activo: 'fecha_adquisicion'
+  fecha_adquisicion: 'fecha_adquisicion',
+  fecha_adquisicion_del_activo: 'fecha_adquisicion',
+  fecha_de_adquisicion: 'fecha_adquisicion'
 };
 
 const resolverEncabezado = (valor) => {
   const encabezado = normalizarEncabezado(valor);
+  if (!encabezado) return null;
   return aliasEncabezados[encabezado] || encabezado;
 };
 
@@ -307,9 +325,13 @@ export const importarProductos = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, error: 'Debes seleccionar un archivo Excel' });
 
+    const ext = String(req.file.originalname || '').toLowerCase();
+    const esExcelValido = ext.endsWith('.xlsx') || ext.endsWith('.xls') || ext.endsWith('.csv');
+    if (!esExcelValido) return res.status(400).json({ success: false, error: 'El archivo debe ser un Excel .xlsx o .xls' });
+
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(req.file.buffer);
-    const hoja = workbook.getWorksheet('Productos') || workbook.worksheets[0];
+    const hoja = workbook.getWorksheet('Productos') || workbook.getWorksheet('Matriz') || workbook.worksheets[0];
     if (!hoja) return res.status(400).json({ success: false, error: 'El archivo no contiene una hoja de productos' });
 
     let filaEncabezados = 1;
@@ -320,7 +342,9 @@ export const importarProductos = async (req, res) => {
       const encontrados = {};
       row.eachCell((cell, index) => {
         const encabezado = resolverEncabezado(cell.value);
-        if (encabezado) encontrados[encabezado] = index;
+        if (encabezado && columnasPlantilla.includes(encabezado)) {
+          encontrados[encabezado] = index;
+        }
       });
       const coincidencias = Object.keys(encontrados).filter((campo) => columnasPlantilla.includes(campo)).length;
       if (coincidencias > mejorCoincidencia) {
@@ -329,6 +353,10 @@ export const importarProductos = async (req, res) => {
         encabezados = encontrados;
       }
     });
+
+    if (!Object.keys(encabezados).length) {
+      return res.status(400).json({ success: false, error: 'No se detectaron columnas válidas en el archivo. Verifica los encabezados del Excel.' });
+    }
 
     const categorias = await prisma.categorias.findMany();
     const categoriasPorNombre = new Map(categorias.map((categoria) => [normalizarNombreCategoria(categoria.nombre), categoria.id]));

@@ -77,9 +77,23 @@ app.use('/api/usuarios', usuariosRoutes);
 // Error handling
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  if (err.message === 'Origen no permitido por CORS') {
+
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'El archivo supera el tamaño máximo permitido (10 MB)', status: 'file_too_large' });
+  }
+
+  if (err && err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(400).json({ error: 'Archivo no válido para esta operación', status: 'invalid_file' });
+  }
+
+  if (err && err.message === 'Origen no permitido por CORS') {
     return res.status(403).json({ error: 'Origen no autorizado', status: 'forbidden' });
   }
+
+  if (err && err.message) {
+    return res.status(400).json({ error: err.message, status: 'bad_request' });
+  }
+
   res.status(500).json({
     error: 'Error interno del servidor',
     status: 'error'

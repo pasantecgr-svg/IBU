@@ -28,7 +28,7 @@ const esStockBajo = (producto) => {
   return bajoCantidad || bajoMetraje;
 };
 
-const notificarStockBajo = async (producto) => {
+const notificarStockBajo = async (producto, destinatario) => {
   if (!esStockBajo(producto)) return null;
 
   console.warn(
@@ -36,7 +36,7 @@ const notificarStockBajo = async (producto) => {
   );
 
   try {
-    await enviarAlertaStockBajo(producto);
+    await enviarAlertaStockBajo(producto, destinatario);
   } catch (error) {
     console.error('No se pudo enviar la notificación por email:', error);
   }
@@ -118,7 +118,8 @@ const columnasPlantilla = [
   'nombre', 'categoria', 'marca', 'modelo', 'numero_serie', 'cantidad_total',
   'unidad', 'metraje_total', 'metraje_restante', 'ubicacion', 'estado',
   'dependencia_codigo', 'dependencia_nombre',
-  'activo_fijo', 'fecha_adquisicion', 'descripcion'
+  'activo_fijo', 'fecha_adquisicion', 'descripcion', 'area',
+  'fecha_ultimo_mantenimiento', 'estado_mantenimiento', 'aporta_plan_mejoramiento'
 ];
 
 const normalizarEncabezado = (valor) => String(valor || '')
@@ -131,6 +132,12 @@ const normalizarEncabezado = (valor) => String(valor || '')
   .replace(/\s+/g, '_');
 
 const aliasEncabezados = {
+  activo: 'activo_fijo',
+  descripcion: 'descripcion',
+  area: 'area',
+  fecha_de_ultimo_mantenimiento: 'fecha_ultimo_mantenimiento',
+  estado_mantenimiento: 'estado_mantenimiento',
+  aporta_al_plan_de_mejoramiento: 'aporta_plan_mejoramiento',
   nombre_activo: 'nombre',
   nombre_del_activo: 'nombre',
   nombre_elemento: 'nombre',
@@ -192,10 +199,23 @@ const convertirFecha = (valor) => {
   return Number.isNaN(fecha.getTime()) ? new Date() : fecha;
 };
 
+const convertirFechaOpcional = (valor) => {
+  if (valor === null || valor === undefined || String(valor).trim() === '') return null;
+  const fecha = valor instanceof Date ? valor : new Date(valor);
+  return Number.isNaN(fecha.getTime()) ? null : fecha;
+};
+
 const convertirNumero = (valor, valorPredeterminado = null) => {
   if (valor === null || valor === undefined || String(valor).trim() === '') return valorPredeterminado;
   const numero = Number(String(valor).replace(',', '.').replace(/[^0-9.-]/g, ''));
   return Number.isFinite(numero) ? numero : valorPredeterminado;
+};
+
+const valorCelda = (celda) => {
+  if (celda && typeof celda === 'object' && Object.prototype.hasOwnProperty.call(celda, 'result')) {
+    return celda.result;
+  }
+  return celda;
 };
 
 const normalizarNombreCategoria = (valor) => String(valor || '')
@@ -306,11 +326,16 @@ export const importarProductos = async (req, res) => {
     const errores = [];
     hoja.eachRow((row, numeroFila) => {
       if (numeroFila <= filaEncabezados) return;
-      const valor = (campo) => (encabezados[campo] ? row.getCell(encabezados[campo]).value : null);
+      const valor = (campo) => (encabezados[campo] ? valorCelda(row.getCell(encabezados[campo]).value) : null);
       const texto = (campo) => String(valor(campo) ?? '').trim();
-      const tieneDatos = Object.values(encabezados).some((indice) => String(row.getCell(indice).value ?? '').trim() !== '');
+      const camposIdentificacion = [
+        'nombre', 'activo_fijo', 'descripcion', 'categoria', 'cantidad_total',
+        'marca', 'modelo', 'numero_serie', 'area', 'dependencia_nombre',
+        'fecha_ultimo_mantenimiento', 'aporta_plan_mejoramiento'
+      ];
+      const tieneDatos = camposIdentificacion.some((campo) => texto(campo) !== '');
       if (!tieneDatos) return;
-      const nombre = texto('nombre') || texto('descripcion') || `Activo ${texto('activo_fijo')}`;
+      const nombre = texto('nombre') || texto('descripcion') || texto('activo_fijo') || 'Activo sin nombre';
       const categoriaTexto = texto('categoria');
       const categoria = categoriasPorNombre.get(normalizarNombreCategoria(categoriaTexto))
         || (esMatrizActivos ? categoriaPredeterminada.id : null);
@@ -336,6 +361,10 @@ export const importarProductos = async (req, res) => {
         dependencia_codigo: texto('dependencia_codigo') || null,
         dependencia_nombre: texto('dependencia_nombre') || null,
         activo_fijo: texto('activo_fijo') || null,
+        area: texto('area') || null,
+        fecha_ultimo_mantenimiento: convertirFechaOpcional(valor('fecha_ultimo_mantenimiento')),
+        estado_mantenimiento: texto('estado_mantenimiento') || null,
+        aporta_plan_mejoramiento: texto('aporta_plan_mejoramiento') || null,
         fecha_adquisicion: convertirFecha(valor('fecha_adquisicion')),
         descripcion: texto('descripcion') || null, created_at: new Date(), updated_at: new Date()
       });
@@ -369,7 +398,11 @@ export const crearProducto = async (req, res) => {
       foto_url,
       descripcion,
       dependencia_codigo,
-      dependencia_nombre
+      dependencia_nombre,
+      area,
+      fecha_ultimo_mantenimiento,
+      estado_mantenimiento,
+      aporta_plan_mejoramiento
     } = req.body;
     // Validación básica
     if (!nombre || !categoria_id || cantidad_total === undefined) {
@@ -415,12 +448,16 @@ export const crearProducto = async (req, res) => {
             dependencia_codigo: dependencia_codigo || null,
             dependencia_nombre: dependencia_nombre || null,
             activo_fijo: req.body.activo_fijo || null,
+            area: area || null,
+            fecha_ultimo_mantenimiento: convertirFechaOpcional(fecha_ultimo_mantenimiento),
+            estado_mantenimiento: estado_mantenimiento || null,
+            aporta_plan_mejoramiento: aporta_plan_mejoramiento || null,
         created_at: new Date(),
         updated_at: new Date()
       }
     });
 
-    const alerta = await notificarStockBajo(producto);
+    const alerta = await notificarStockBajo(producto, req.user?.email);
 
     res.status(201).json({
       success: true,
@@ -464,7 +501,11 @@ export const actualizarProducto = async (req, res) => {
       'activo_fijo',
       'descripcion',
       'dependencia_codigo',
-      'dependencia_nombre'
+      'dependencia_nombre',
+      'area',
+      'fecha_ultimo_mantenimiento',
+      'estado_mantenimiento',
+      'aporta_plan_mejoramiento'
     ];
 
     const updates = {};
@@ -505,7 +546,7 @@ export const actualizarProducto = async (req, res) => {
     const producto = await prisma.productos.update({ where: { id }, data: updates });
     if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    const alerta = await notificarStockBajo(producto);
+    const alerta = await notificarStockBajo(producto, req.user?.email);
 
     res.json({
       success: true,
@@ -584,15 +625,32 @@ export const actualizarCantidadDisponible = async (req, res) => {
       });
     }
 
+    const productoActual = await prisma.productos.findUnique({
+      where: { id },
+      select: { id: true, cantidad_total: true }
+    });
+
+    if (!productoActual) {
+      return res.status(404).json({ success: false, error: 'Producto no encontrado' });
+    }
+
+    const cantidad = Number(cantidad_disponible);
+    if (!Number.isInteger(cantidad) || cantidad < 0 || cantidad > productoActual.cantidad_total) {
+      return res.status(400).json({
+        success: false,
+        error: `La cantidad disponible debe ser un entero entre 0 y ${productoActual.cantidad_total}`
+      });
+    }
+
     const producto = await prisma.productos.update({
       where: { id },
       data: {
-        cantidad_disponible,
+        cantidad_disponible: cantidad,
         updated_at: new Date()
       }
     });
 
-    const alerta = await notificarStockBajo(producto);
+    const alerta = await notificarStockBajo(producto, req.user?.email);
 
     res.json({
       success: true,

@@ -10,8 +10,9 @@ const getEmailConfig = () => ({
   to: process.env.NOTIFICACION_EMAIL || process.env.SMTP_USER
 });
 
-export const enviarAlertaStockBajo = async (producto) => {
+export const enviarAlertaStockBajo = async (producto, destinatario) => {
   const config = getEmailConfig();
+  const to = destinatario || config.to;
 
   if (!config.host || !config.user || !config.pass) {
     console.warn('⚠️ SMTP no configurado. Se omite el envío de email de stock bajo.');
@@ -41,7 +42,7 @@ export const enviarAlertaStockBajo = async (producto) => {
 
     const info = await transporter.sendMail({
       from: `"Inventario Bodega" <${config.from}>`,
-      to: config.to,
+      to,
       subject: `Alerta de stock bajo: ${producto.nombre}`,
       html
     });

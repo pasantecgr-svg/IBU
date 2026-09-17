@@ -29,28 +29,32 @@ model categorias {
 }
 
 model productos {
-  id                  String    @id @default(uuid()) @db.Uuid
-  nombre              String
-  categoria_id        String    @db.Uuid
-  marca               String?
-  modelo              String?
-  numero_serie        String?
-  cantidad_total      Int
-  cantidad_disponible Int
-  unidad              String? // e.g., 'metros', 'unidades'
-  metraje_total       Int? // total meters for carrete-type products
-  metraje_restante    Int? // remaining meters
-  ubicacion           String?
-  estado              String?
-  activo_fijo         String?  // número o código de activo fijo (opcional)
-  dependencia_codigo  String?
-  dependencia_nombre  String?
-  stock_estado        String?   @default("normal")
-  fecha_adquisicion   DateTime? @db.Date
-  foto_url            String?
-  descripcion         String?
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @updatedAt
+  id                         String    @id @default(uuid()) @db.Uuid
+  nombre                     String
+  categoria_id               String    @db.Uuid
+  marca                      String?
+  modelo                     String?
+  numero_serie               String?
+  cantidad_total             Int
+  cantidad_disponible        Int
+  unidad                     String? // e.g., 'metros', 'unidades'
+  metraje_total              Int? // total meters for carrete-type products
+  metraje_restante           Int? // remaining meters
+  ubicacion                  String?
+  estado                     String?
+  activo_fijo                String? // número o código de activo fijo (opcional)
+  dependencia_codigo         String?
+  dependencia_nombre         String?
+  area                       String?
+  fecha_ultimo_mantenimiento DateTime? @db.Date
+  estado_mantenimiento       String?
+  aporta_plan_mejoramiento   String?
+  stock_estado               String?   @default("normal")
+  fecha_adquisicion          DateTime? @db.Date
+  foto_url                   String?
+  descripcion                String?
+  created_at                 DateTime  @default(now())
+  updated_at                 DateTime  @updatedAt
 
   categorias categorias @relation(fields: [categoria_id], references: [id])
   archivos   archivos[]

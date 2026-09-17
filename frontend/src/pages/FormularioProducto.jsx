@@ -17,6 +17,10 @@ export default function FormularioProducto({ producto, onGuardar }) {
     ubicacion: 'Almacén',
     dependencia_codigo: '',
     dependencia_nombre: '',
+    area: '',
+    fecha_ultimo_mantenimiento: '',
+    estado_mantenimiento: '',
+    aporta_plan_mejoramiento: '',
     estado: 'nuevo',
     fecha_adquisicion: new Date().toISOString().split('T')[0],
     foto_url: '',
@@ -393,6 +397,26 @@ export default function FormularioProducto({ producto, onGuardar }) {
                 className="form-input"
               />
             </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Área</label>
+              <input type="text" name="area" value={formData.area || ''} onChange={handleInputChange} placeholder="Área responsable" className="form-input" />
+            </div>
+            <div className="form-group">
+              <label>Último mantenimiento</label>
+              <input type="date" name="fecha_ultimo_mantenimiento" value={formData.fecha_ultimo_mantenimiento || ''} onChange={handleInputChange} className="form-input" />
+            </div>
+            <div className="form-group">
+              <label>Estado de mantenimiento</label>
+              <input type="text" name="estado_mantenimiento" value={formData.estado_mantenimiento || ''} onChange={handleInputChange} placeholder="Vigente, Próximo o Revisar" className="form-input" />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Aporta al Plan de Mejoramiento</label>
+            <input type="text" name="aporta_plan_mejoramiento" value={formData.aporta_plan_mejoramiento || ''} onChange={handleInputChange} className="form-input" />
           </div>
         </div>
 

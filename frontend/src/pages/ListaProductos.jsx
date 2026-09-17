@@ -185,7 +185,10 @@ export default function ListaProductos({ onEditar }) {
             <tr>
               <th>Nombre</th>
               <th>Categoría</th>
+              <th>Área</th>
               <th>Dependencia</th>
+              <th>Mantenimiento</th>
+              <th>Plan de mejoramiento</th>
               <th>Marca/Modelo</th>
               <th>Total</th>
               <th>Disponible</th>
@@ -210,7 +213,34 @@ export default function ListaProductos({ onEditar }) {
                         />
                       </td>
                       <td>{producto.categorias?.nombre}</td>
+                      <td>
+                        <input
+                          type="text"
+                          value={edicion.area || ''}
+                          onChange={(e) => setEdicion({ ...edicion, area: e.target.value })}
+                          className="input-edicion"
+                          placeholder="Área"
+                        />
+                      </td>
                       <td>{producto.dependencia_nombre || '-'}</td>
+                      <td>
+                        <input
+                          type="text"
+                          value={edicion.estado_mantenimiento || ''}
+                          onChange={(e) => setEdicion({ ...edicion, estado_mantenimiento: e.target.value })}
+                          className="input-edicion"
+                          placeholder="Estado mantenimiento"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          value={edicion.aporta_plan_mejoramiento || ''}
+                          onChange={(e) => setEdicion({ ...edicion, aporta_plan_mejoramiento: e.target.value })}
+                          className="input-edicion"
+                          placeholder="Aporta al plan"
+                        />
+                      </td>
                       <td>
                         <input
                           type="text"
@@ -291,7 +321,10 @@ export default function ListaProductos({ onEditar }) {
                         <strong>{producto.nombre}</strong>
                       </td>
                       <td>{producto.categorias?.nombre || 'N/A'}</td>
+                      <td>{producto.area || '-'}</td>
                       <td>{producto.dependencia_nombre || 'Sin asignar'}</td>
+                      <td>{producto.estado_mantenimiento || '-'}</td>
+                      <td>{producto.aporta_plan_mejoramiento || '-'}</td>
                       <td>{producto.marca || '-'} / {producto.modelo || '-'}</td>
                       <td className="cantidad-total">{producto.cantidad_total}</td>
                       <td>

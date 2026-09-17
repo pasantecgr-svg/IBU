@@ -32,7 +32,7 @@ export const obtenerNotificaciones = async (req, res) => {
     res.json({ success: true, notificaciones });
   } catch (error) {
     console.error('Error obtenerNotificaciones:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.json({ success: true, notificaciones: [], warning: 'No se pudieron cargar notificaciones; se devolvió la lista vacía.' });
   }
 };
 

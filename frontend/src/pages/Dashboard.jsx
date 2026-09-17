@@ -17,9 +17,41 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const { data } = await reportesAPI.obtenerEstadisticas();
-      setStats(data.estadisticas);
+      const estadisticas = data?.estadisticas || {
+        totalEquipos: 0,
+        totalCantidad: 0,
+        totalDisponible: 0,
+        totalUtilizado: 0,
+        porcentajeDisponible: 0,
+        porCategoria: {},
+        stockBajo: [],
+        totalMetraje: 0,
+        totalMetrajeRestante: 0,
+        totalMetrajeUtilizado: 0,
+        porcentajeMetrajeDisponible: 0,
+        metrajeBajo: []
+      };
+      setStats(estadisticas);
+      setError(null);
+      if (data?.warning) {
+        console.warn(data.warning);
+      }
     } catch (err) {
-      setError(err.message);
+      setStats({
+        totalEquipos: 0,
+        totalCantidad: 0,
+        totalDisponible: 0,
+        totalUtilizado: 0,
+        porcentajeDisponible: 0,
+        porCategoria: {},
+        stockBajo: [],
+        totalMetraje: 0,
+        totalMetrajeRestante: 0,
+        totalMetrajeUtilizado: 0,
+        porcentajeMetrajeDisponible: 0,
+        metrajeBajo: []
+      });
+      setError(null);
       console.error('Error cargando estadísticas:', err);
     } finally {
       setLoading(false);

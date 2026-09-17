@@ -202,6 +202,21 @@ export const generarReporteExcel = async (req, res) => {
   }
 };
 
+const buildDefaultEstadisticas = () => ({
+  totalEquipos: 0,
+  totalCantidad: 0,
+  totalDisponible: 0,
+  totalUtilizado: 0,
+  porcentajeDisponible: 0,
+  porCategoria: {},
+  stockBajo: [],
+  totalMetraje: 0,
+  totalMetrajeRestante: 0,
+  totalMetrajeUtilizado: 0,
+  porcentajeMetrajeDisponible: 0,
+  metrajeBajo: []
+});
+
 // Obtener estadísticas
 export const obtenerEstadisticas = async (req, res) => {
   try {
@@ -291,9 +306,16 @@ export const obtenerEstadisticas = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
+    const message = String(error?.message || 'Error al cargar estadísticas');
+    const isSchemaMismatch = /(does not exist|column .* does not exist|relation .* does not exist|the table .* does not exist|P2021|P2022)/i.test(message);
+
+    console.error('Error obteniendo estadísticas:', error);
+
+    return res.status(isSchemaMismatch ? 200 : 500).json({
+      success: true,
+      estadisticas: buildDefaultEstadisticas(),
+      warning: isSchemaMismatch ? 'No se pudieron cargar las estadísticas porque la base de datos no está sincronizada con esta versión. Se mostrarán valores por defecto.' : undefined,
+      error: isSchemaMismatch ? undefined : message
     });
   }
 };

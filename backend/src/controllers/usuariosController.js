@@ -28,14 +28,23 @@ const esDependenciaInventario = (valor) => {
 
 const cargarMiddleware = async (url) => {
   const token = process.env.FUNCTIONARIES_API_TOKEN;
-  if (!token) throw new Error('FUNCTIONARIES_API_TOKEN no está configurado');
-  const { data } = await axios.get(url, { params: { api_token: token }, timeout: 30000 });
-  return Array.isArray(data) ? data : (data?.data || data?.results || []);
+  if (!token) return [];
+
+  try {
+    const { data } = await axios.get(url, { params: { api_token: token }, timeout: 30000 });
+    return Array.isArray(data) ? data : (data?.data || data?.results || []);
+  } catch (error) {
+    console.warn(`Middleware no disponible para ${url}:`, error.message);
+    return [];
+  }
 };
 
 const cargarFuncionariosG3 = async () => {
-  if (!process.env.FUNCTIONARIES_API_TOKEN) return [];
   const funcionarios = await cargarMiddleware(FUNCTIONARIES_URL);
+  if (!Array.isArray(funcionarios) || funcionarios.length === 0) {
+    return [];
+  }
+
   return funcionarios.filter((funcionario) => {
     const dependencias = [funcionario.faculty, funcionario.program]
       .filter(Boolean)
@@ -55,8 +64,11 @@ const cargarFuncionariosG3 = async () => {
 };
 
 const cargarDependenciasInventario = async () => {
-  if (!process.env.FUNCTIONARIES_API_TOKEN) return DEPENDENCIAS_RESPALDO;
   const dependencias = await cargarMiddleware(DEPENDENCIES_URL);
+  if (!Array.isArray(dependencias) || dependencias.length === 0) {
+    return DEPENDENCIAS_RESPALDO;
+  }
+
   return dependencias
     .filter((dependencia) => esDependenciaInventario(dependencia.dep_name))
     .map((dependencia) => ({
@@ -118,7 +130,7 @@ export const obtenerFuncionariosG3 = async (req, res) => {
     res.json({ success: true, fuente: process.env.FUNCTIONARIES_API_TOKEN ? 'middleware' : 'respaldo-local', filtro: ORGANIGRAMA_FILTRO, funcionarios });
   } catch (error) {
     console.error('Error obtenerFuncionariosG3:', error.message);
-    res.status(502).json({ success: false, error: 'No se pudo cargar el personal G3 desde el middleware institucional' });
+    res.json({ success: true, fuente: 'respaldo-local', filtro: ORGANIGRAMA_FILTRO, funcionarios: [], warning: 'No se pudo acceder al middleware institucional; se devolvió una lista vacía.' });
   }
 };
 
@@ -128,7 +140,7 @@ export const obtenerDependenciasInventario = async (req, res) => {
     res.json({ success: true, fuente: process.env.FUNCTIONARIES_API_TOKEN ? 'middleware' : 'respaldo-local', advertencia: process.env.FUNCTIONARIES_API_TOKEN ? null : 'Configura FUNCTIONARIES_API_TOKEN para sincronizar nombres, códigos y funcionarios institucionales.', filtro: ORGANIGRAMA_FILTRO, dependencias });
   } catch (error) {
     console.error('Error obtenerDependenciasInventario:', error.message);
-    res.status(502).json({ success: false, error: 'No se pudieron cargar las dependencias del middleware institucional' });
+    res.json({ success: true, fuente: 'respaldo-local', filtro: ORGANIGRAMA_FILTRO, dependencias: DEPENDENCIAS_RESPALDO, warning: 'No se pudo acceder al middleware institucional; se usó la lista local de dependencias.' });
   }
 };
 

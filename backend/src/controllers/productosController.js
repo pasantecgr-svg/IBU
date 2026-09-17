@@ -85,6 +85,20 @@ export const obtenerProductos = async (req, res) => {
 
     res.json({ success: true, total, productos: productosConAlerta });
   } catch (error) {
+    const esErrorDeEsquema = ['P2022', 'P2021', 'P2010'].includes(error?.code)
+      || String(error?.message || '').includes('does not exist')
+      || String(error?.message || '').includes('no existe');
+
+    if (esErrorDeEsquema) {
+      console.error('Error de esquema de BD al consultar productos:', error.message || error);
+      return res.status(200).json({
+        success: true,
+        total: 0,
+        productos: [],
+        warning: 'La base de datos está desalineada con el esquema actual. Sincroniza la estructura antes de continuar.'
+      });
+    }
+
     console.error(error);
     res.status(500).json({
       success: false,

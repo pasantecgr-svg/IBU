@@ -19,6 +19,10 @@ const EMAIL_SENDERS = (process.env.EMAIL_SENDERS || 'IBU@unibague.edu.co')
   .filter(Boolean);
 
 const normalizarEmail = (email) => (typeof email === 'string' ? email.trim().toLowerCase() : '');
+const correoInstitucionalValido = (email) => {
+  const correo = normalizarEmail(email);
+  return Boolean(correo) && correo.endsWith(DOMINIO_PERMITIDO);
+};
 const obtenerRolUsuario = (email) => (ADMIN_EMAILS.includes(normalizarEmail(email)) ? 'ADMIN' : 'USER');
 
 const puedeEnviarCorreos = (email) => EMAIL_SENDERS.includes(normalizarEmail(email));
@@ -44,7 +48,7 @@ export const registerUsuario = async (req, res) => {
     const { email, password, nombre } = req.body || {};
     const correo = normalizarEmail(email);
 
-    if (!correo || !correo.endsWith(DOMINIO_PERMITIDO)) {
+    if (!correoInstitucionalValido(correo)) {
       return res.status(400).json({
         success: false,
         error: `Solo se permiten correos con el dominio ${DOMINIO_PERMITIDO}`
@@ -108,10 +112,10 @@ export const googleLogin = async (req, res) => {
     const correo = normalizarEmail(payload.email);
     console.log('[Google Login] Email normalizado:', correo);
 
-    if (!correo) {
-      return res.status(401).json({
+    if (!correoInstitucionalValido(correo)) {
+      return res.status(403).json({
         success: false,
-        error: 'La cuenta de Google no tiene un correo válido'
+        error: `Solo se permiten cuentas con el dominio ${DOMINIO_PERMITIDO}`
       });
     }
 
@@ -152,7 +156,7 @@ export const loginUsuario = async (req, res) => {
     const { email, password } = req.body || {};
     const correo = normalizarEmail(email);
 
-    if (!correo || !correo.endsWith(DOMINIO_PERMITIDO)) {
+    if (!correoInstitucionalValido(correo)) {
       return res.status(400).json({
         success: false,
         error: `Solo se permiten correos con el dominio ${DOMINIO_PERMITIDO}`

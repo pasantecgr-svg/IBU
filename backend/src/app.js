@@ -17,15 +17,27 @@ import usuariosRoutes from './routes/usuarios.js';
 dotenv.config();
 
 const app = express();
+const normalizeOrigin = (origin) => {
+  if (!origin) return '';
+  const value = String(origin).trim();
+  if (!value) return '';
+  try {
+    return new URL(value).origin;
+  } catch {
+    return value.replace(/\/+$/, '');
+  }
+};
+
 const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173')
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => normalizeOrigin(origin))
   .filter(Boolean);
 
 // Middleware
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (!origin || allowedOrigins.includes(normalizedOrigin)) return callback(null, true);
     return callback(new Error('Origen no permitido por CORS'));
   },
   credentials: true

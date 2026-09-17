@@ -257,6 +257,34 @@ const normalizarNombreCategoria = (valor) => String(valor || '')
   .toLowerCase()
   .replace(/\s+/g, ' ');
 
+const obtenerColumnasProductos = async () => {
+  try {
+    const columnas = await prisma.$queryRaw`SELECT column_name::text AS column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'productos';`;
+    return new Set((columnas || []).map((columna) => String(columna.column_name || '')) .filter(Boolean));
+  } catch (error) {
+    console.warn('No se pudo detectar esquema de productos, usando columnas por defecto:', error.message);
+    return new Set([
+      'id', 'nombre', 'categoria_id', 'marca', 'modelo', 'numero_serie', 'cantidad_total',
+      'cantidad_disponible', 'unidad', 'metraje_total', 'metraje_restante', 'ubicacion', 'estado',
+      'activo_fijo', 'dependencia_codigo', 'dependencia_nombre', 'stock_estado', 'fecha_adquisicion',
+      'foto_url', 'descripcion', 'created_at', 'updated_at', 'area', 'fecha_ultimo_mantenimiento',
+      'estado_mantenimiento', 'aporta_plan_mejoramiento'
+    ]);
+  }
+};
+
+const filtrarCamposProducto = (payload = {}, columnasDisponibles = new Set()) => {
+  const resultado = {};
+  Object.entries(payload).forEach(([key, value]) => {
+    if (key === 'created_at' || key === 'updated_at') {
+      if (value !== undefined && columnasDisponibles.has(key)) resultado[key] = value;
+      return;
+    }
+    if (value !== undefined && columnasDisponibles.has(key)) resultado[key] = value;
+  });
+  return resultado;
+};
+
 export const descargarPlantillaProductos = async (req, res) => {
   const categorias = await prisma.categorias.findMany({ orderBy: { nombre: 'asc' } });
   const workbook = new ExcelJS.Workbook();
@@ -363,9 +391,22 @@ export const importarProductos = async (req, res) => {
     const categoriaPredeterminada = categorias.find((categoria) => normalizarNombreCategoria(categoria.nombre) === 'activo fijo')
       || await prisma.categorias.create({ data: { nombre: 'Activo fijo' } });
     categoriasPorNombre.set('activo fijo', categoriaPredeterminada.id);
+    const columnasDisponibles = await obtenerColumnasProductos();
     const esMatrizActivos = !encabezados.categoria || !encabezados.cantidad_total;
     const filas = [];
     const errores = [];
+    const crearCategoriaSiFalta = async (categoriaNombre) => {
+      const nombreLimpio = String(categoriaNombre || '').trim();
+      if (!nombreLimpio) return categoriaPredeterminada.id;
+      const clave = normalizarNombreCategoria(nombreLimpio);
+      if (!clave) return categoriaPredeterminada.id;
+      if (categoriasPorNombre.has(clave)) return categoriasPorNombre.get(clave);
+      const categoriaNueva = await prisma.categorias.create({ data: { nombre: nombreLimpio } });
+      categoriasPorNombre.set(clave, categoriaNueva.id);
+      return categoriaNueva.id;
+    };
+
+    const filasAProcesar = [];
     hoja.eachRow((row, numeroFila) => {
       if (numeroFila <= filaEncabezados) return;
       const valor = (campo) => (encabezados[campo] ? valorCelda(row.getCell(encabezados[campo]).value) : null);
@@ -377,23 +418,32 @@ export const importarProductos = async (req, res) => {
       ];
       const tieneDatos = camposIdentificacion.some((campo) => texto(campo) !== '');
       if (!tieneDatos) return;
+      filasAProcesar.push({ row, numeroFila, valor, texto });
+    });
+
+    for (const { row, numeroFila, valor, texto } of filasAProcesar) {
       const nombre = texto('nombre') || texto('descripcion') || texto('activo_fijo') || 'Activo sin nombre';
       const categoriaTexto = texto('categoria');
-      const categoria = categoriasPorNombre.get(normalizarNombreCategoria(categoriaTexto))
+      let categoria = categoriasPorNombre.get(normalizarNombreCategoria(categoriaTexto))
         || (esMatrizActivos ? categoriaPredeterminada.id : null);
       const cantidad = convertirNumero(valor('cantidad_total'), 1);
       const metrajeTotal = texto('metraje_total') ? convertirNumero(valor('metraje_total')) : null;
       const metrajeRestante = texto('metraje_restante') ? convertirNumero(valor('metraje_restante')) : metrajeTotal;
+
+      if (!categoria && categoriaTexto) {
+        categoria = await crearCategoriaSiFalta(categoriaTexto);
+      }
+
       if (!nombre || !categoria || !Number.isInteger(cantidad) || cantidad < 1) {
         const detalleCategoria = categoriaTexto && !categoria ? ` categoría "${categoriaTexto}" no existe` : '';
         errores.push(`Fila ${numeroFila}: nombre,${detalleCategoria || ' categoría'} o cantidad_total inválidos`);
-        return;
+        continue;
       }
       if (metrajeTotal !== null && (!Number.isInteger(metrajeTotal) || metrajeTotal < 0 || metrajeRestante < 0 || metrajeRestante > metrajeTotal)) {
         errores.push(`Fila ${numeroFila}: metraje inválido`);
-        return;
+        continue;
       }
-      filas.push({
+      filas.push(filtrarCamposProducto({
         id: uuidv4(), nombre, categoria_id: categoria,
         marca: texto('marca') || null, modelo: texto('modelo') || null,
         numero_serie: texto('numero_serie') || null, cantidad_total: cantidad,
@@ -409,8 +459,8 @@ export const importarProductos = async (req, res) => {
         aporta_plan_mejoramiento: texto('aporta_plan_mejoramiento') || null,
         fecha_adquisicion: convertirFecha(valor('fecha_adquisicion')),
         descripcion: texto('descripcion') || null, created_at: new Date(), updated_at: new Date()
-      });
-    });
+      }, columnasDisponibles));
+    }
 
     if (!filas.length) return res.status(400).json({ success: false, error: 'No hay filas válidas para importar', errores });
     await prisma.productos.createMany({ data: filas });
@@ -469,8 +519,9 @@ export const crearProducto = async (req, res) => {
       return res.status(400).json({ success: false, error: 'El metraje debe ser un entero válido y el restante no puede superar el total' });
     }
 
+    const columnasDisponibles = await obtenerColumnasProductos();
     const producto = await prisma.productos.create({
-      data: {
+      data: filtrarCamposProducto({
         id: uuidv4(),
         nombre,
         categoria_id,
@@ -486,17 +537,17 @@ export const crearProducto = async (req, res) => {
         estado: estado || 'nuevo',
         fecha_adquisicion: fecha_adquisicion ? new Date(fecha_adquisicion) : new Date(),
         foto_url: foto_url || null,
-            descripcion: descripcion || null,
-            dependencia_codigo: dependencia_codigo || null,
-            dependencia_nombre: dependencia_nombre || null,
-            activo_fijo: req.body.activo_fijo || null,
-            area: area || null,
-            fecha_ultimo_mantenimiento: convertirFechaOpcional(fecha_ultimo_mantenimiento),
-            estado_mantenimiento: estado_mantenimiento || null,
-            aporta_plan_mejoramiento: aporta_plan_mejoramiento || null,
+        descripcion: descripcion || null,
+        dependencia_codigo: dependencia_codigo || null,
+        dependencia_nombre: dependencia_nombre || null,
+        activo_fijo: req.body.activo_fijo || null,
+        area: area || null,
+        fecha_ultimo_mantenimiento: convertirFechaOpcional(fecha_ultimo_mantenimiento),
+        estado_mantenimiento: estado_mantenimiento || null,
+        aporta_plan_mejoramiento: aporta_plan_mejoramiento || null,
         created_at: new Date(),
         updated_at: new Date()
-      }
+      }, columnasDisponibles)
     });
 
     const alerta = await notificarStockBajo(producto, req.user?.email);
@@ -584,8 +635,8 @@ export const actualizarProducto = async (req, res) => {
     }
 
     // Do not persist `stock_estado` to avoid schema mismatch; compute it in responses
-
-    const producto = await prisma.productos.update({ where: { id }, data: updates });
+    const columnasDisponibles = await obtenerColumnasProductos();
+    const producto = await prisma.productos.update({ where: { id }, data: filtrarCamposProducto(updates, columnasDisponibles) });
     if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const alerta = await notificarStockBajo(producto, req.user?.email);

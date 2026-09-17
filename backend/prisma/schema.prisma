@@ -66,7 +66,7 @@ model ordenes_trabajo {
   titulo        String
   descripcion   String?
   // Secuencia numérica autoincremental para mostrar el número de orden (empieza en 1)
-  secuencia     BigInt   @default(autoincrement()) @db.BigInt
+  secuencia     BigInt   @unique @default(autoincrement()) @db.BigInt
   // Número legible de orden: '01' para la primera, '02', ..., '10', '11', etc.
   numero        String?  @unique
   usuario_id    String   @db.Uuid

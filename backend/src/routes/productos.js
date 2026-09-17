@@ -19,16 +19,16 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const nombre = String(file.originalname || '').toLowerCase();
-    const permitido = nombre.endsWith('.xlsx') || nombre.endsWith('.xls') || nombre.endsWith('.csv');
+    const permitido = ['.xlsx', '.xls', '.xlsm', '.csv'].some((extension) => nombre.endsWith(extension));
     if (!permitido) {
-      return cb(new Error('El archivo debe ser un Excel válido (.xlsx o .xls)'));
+      return cb(new Error('El archivo debe ser un Excel válido (.xlsx, .xls, .xlsm o .csv)'));
     }
     cb(null, true);
   }
 });
 
 router.get('/plantilla', descargarPlantillaProductos);
-router.post('/importar', requireRole(['ADMIN']), (req, res, next) => {
+router.post('/importar', (req, res, next) => {
   upload.single('archivo')(req, res, (err) => {
     if (err) {
       if (err.code === 'LIMIT_FILE_SIZE') {
@@ -40,15 +40,14 @@ router.post('/importar', requireRole(['ADMIN']), (req, res, next) => {
   });
 }, importarProductos);
 
-// CRUD completo
+// CRUD completo para usuarios autenticados del middleware institucional
 router.get('/', obtenerProductos);
 router.get('/:id', obtenerProducto);
-// Las operaciones de escritura requieren administración.
-router.post('/', requireRole(['ADMIN']), crearProducto);
-router.put('/:id', requireRole(['ADMIN']), actualizarProducto);
-router.delete('/:id', requireRole(['ADMIN']), eliminarProducto);
+router.post('/', crearProducto);
+router.put('/:id', actualizarProducto);
+router.delete('/:id', eliminarProducto);
 
-// Actualizar cantidad disponible (solo ADMIN)
+// Actualizar cantidad disponible
 router.patch('/:id/cantidad', actualizarCantidadDisponible);
 
 export default router;

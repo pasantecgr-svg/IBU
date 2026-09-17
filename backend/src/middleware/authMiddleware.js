@@ -6,6 +6,8 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET debe existir y tener al menos 32 caracteres');
 }
 
+const normalizarRol = (rol) => (typeof rol === 'string' ? rol.trim().toUpperCase() : '');
+
 export const requireAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -31,7 +33,10 @@ export const requireAuth = async (req, res, next) => {
       });
     }
 
-    req.user = usuario;
+    req.user = {
+      ...usuario,
+      role: normalizarRol(usuario.role) || 'PERSONAL'
+    };
     next();
   } catch (error) {
     return res.status(401).json({
@@ -46,7 +51,11 @@ export const requireRole = (roles = []) => async (req, res, next) => {
     return res.status(401).json({ success: false, error: 'No autenticado' });
   }
 
-  if (!roles.length || roles.includes(req.user.role)) {
+  const rolesPermitidos = roles.map(normalizarRol);
+  const rolUsuario = normalizarRol(req.user.role);
+  const esPersonalCompat = (rolUsuario === 'USER' || rolUsuario === 'PERSONAL') && rolesPermitidos.includes('PERSONAL');
+
+  if (!rolesPermitidos.length || rolesPermitidos.includes(rolUsuario) || esPersonalCompat) {
     return next();
   }
 

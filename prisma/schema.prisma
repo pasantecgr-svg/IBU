@@ -12,7 +12,7 @@ model usuarios {
   email         String   @unique
   password_hash String?
   nombre        String?
-  role          String   @default("USER")
+  role          String   @default("PERSONAL")
   google_id     String?  @unique
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt

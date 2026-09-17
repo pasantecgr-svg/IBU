@@ -106,8 +106,9 @@ export const actualizarRol = async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body || {};
+    const rolNormalizado = String(role || '').trim().toUpperCase();
 
-    if (!['ADMIN', 'USER'].includes(role)) {
+    if (!['ADMIN', 'USER', 'PERSONAL'].includes(rolNormalizado)) {
       return res.status(400).json({ success: false, error: 'Rol inválido' });
     }
 
@@ -116,7 +117,7 @@ export const actualizarRol = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
     }
 
-    const actualizado = await prisma.usuarios.update({ where: { id }, data: { role } });
+    const actualizado = await prisma.usuarios.update({ where: { id }, data: { role: rolNormalizado === 'USER' ? 'PERSONAL' : rolNormalizado } });
     res.json({ success: true, usuario: { id: actualizado.id, email: actualizado.email, role: actualizado.role } });
   } catch (error) {
     console.error('Error actualizarRol:', error);

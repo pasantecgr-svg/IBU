@@ -3,32 +3,46 @@ import { enviarAlertaStockBajo } from '../utils/emailService.js';
 
 export const obtenerNotificaciones = async (req, res) => {
   try {
-    const productos = await prisma.productos.findMany({
-      include: { categorias: true },
-      orderBy: { updated_at: 'desc' }
-    });
+    const productos = await prisma.$queryRaw`
+      SELECT
+        p.id,
+        p.nombre,
+        p.cantidad_disponible,
+        p.metraje_restante,
+        p.metraje_total,
+        p.unidad,
+        p.updated_at,
+        c.nombre AS categoria_nombre
+      FROM productos p
+      LEFT JOIN categorias c ON c.id = p.categoria_id
+      ORDER BY p.updated_at DESC
+    `;
+
     const notificaciones = [];
     for (const producto of productos) {
-      const bajoCantidad = producto.cantidad_disponible > 0 && producto.cantidad_disponible <= 5;
-      const bajoMetraje = typeof producto.metraje_restante === 'number'
-        && typeof producto.metraje_total === 'number'
-        && producto.metraje_total > 0
-        && (producto.metraje_restante <= 10 || producto.metraje_restante / producto.metraje_total <= 0.1);
+      const cantidadDisponible = Number(producto.cantidad_disponible ?? 0);
+      const metrajeRestante = Number(producto.metraje_restante ?? 0);
+      const metrajeTotal = Number(producto.metraje_total ?? 0);
+      const bajoCantidad = cantidadDisponible > 0 && cantidadDisponible <= 5;
+      const bajoMetraje = metrajeTotal > 0 && (metrajeRestante <= 10 || metrajeRestante / metrajeTotal <= 0.1);
+
       if (bajoCantidad || bajoMetraje) {
         const detalles = [];
-        if (bajoCantidad) detalles.push(`${producto.cantidad_disponible} unidades disponibles`);
-        if (bajoMetraje) detalles.push(`${producto.metraje_restante} ${producto.unidad || 'metros'} restantes`);
+        if (bajoCantidad) detalles.push(`${cantidadDisponible} unidades disponibles`);
+        if (bajoMetraje) detalles.push(`${metrajeRestante} ${producto.unidad || 'metros'} restantes`);
+
         notificaciones.push({
           id: `stock-${producto.id}`,
-          tipo: producto.cantidad_disponible === 0 || producto.metraje_restante === 0 ? 'agotado' : 'stock_bajo',
-          titulo: producto.cantidad_disponible === 0 || producto.metraje_restante === 0 ? 'Producto agotado' : 'Stock bajo',
+          tipo: cantidadDisponible === 0 || metrajeRestante === 0 ? 'agotado' : 'stock_bajo',
+          titulo: cantidadDisponible === 0 || metrajeRestante === 0 ? 'Producto agotado' : 'Stock bajo',
           mensaje: `${producto.nombre}: ${detalles.join(' y ')}.`,
           producto_id: producto.id,
-          categoria: producto.categorias?.nombre || 'Sin categoría',
+          categoria: producto.categoria_nombre || 'Sin categoría',
           updated_at: producto.updated_at
         });
       }
     }
+
     res.json({ success: true, notificaciones });
   } catch (error) {
     console.error('Error obtenerNotificaciones:', error);

@@ -23,7 +23,8 @@ const correoInstitucionalValido = (email) => {
   const correo = normalizarEmail(email);
   return Boolean(correo) && correo.endsWith(DOMINIO_PERMITIDO);
 };
-const obtenerRolUsuario = (email) => (ADMIN_EMAILS.includes(normalizarEmail(email)) ? 'ADMIN' : 'USER');
+const normalizarRol = (rol) => (typeof rol === 'string' ? rol.trim().toUpperCase() : '');
+const obtenerRolUsuario = (email) => (ADMIN_EMAILS.includes(normalizarEmail(email)) ? 'ADMIN' : 'PERSONAL');
 
 const puedeEnviarCorreos = (email) => EMAIL_SENDERS.includes(normalizarEmail(email));
 
@@ -31,14 +32,14 @@ const serializarUsuario = (usuario) => ({
   id: usuario.id,
   email: usuario.email,
   nombre: usuario.nombre || usuario.email.split('@')[0],
-  role: usuario.role || 'USER',
+  role: normalizarRol(usuario.role) || 'PERSONAL',
   google_id: usuario.google_id || null,
   created_at: usuario.created_at,
   updated_at: usuario.updated_at
 });
 
 const crearToken = (usuario) => jwt.sign(
-  { sub: usuario.id, email: usuario.email, role: usuario.role || 'USER' },
+  { sub: usuario.id, email: usuario.email, role: normalizarRol(usuario.role) || 'PERSONAL' },
   JWT_SECRET,
   { expiresIn: '8h' }
 );

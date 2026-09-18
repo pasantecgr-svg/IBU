@@ -4,11 +4,11 @@ const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 
-  if (!envUrl || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
     return 'http://localhost:3001/api';
   }
 
-  return envUrl;
+  return envUrl || '/api';
 };
 
 const API_URL = getApiBaseUrl();

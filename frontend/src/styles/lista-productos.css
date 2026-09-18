@@ -122,6 +122,21 @@
   flex-wrap: wrap;
 }
 
+.campo-busqueda {
+  display: flex;
+  align-items: center;
+  min-width: 220px;
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+  background: white;
+}
+
+.campo-dependencia {
+  max-width: 340px;
+}
+
 .input-busqueda,
 .select-categoria {
   padding: 12px 15px;
@@ -133,16 +148,36 @@
 
 .input-busqueda {
   flex: 1;
-  min-width: 200px;
+  min-width: 180px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .select-categoria {
   min-width: 180px;
 }
 
-.filtro-dependencia {
-  min-width: 220px;
-  flex: 1;
+.btn-busqueda {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 100px;
+  height: 42px;
+  padding: 0 14px;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  transition: filter 0.2s ease;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.btn-busqueda:hover {
+  filter: brightness(1.08);
 }
 
 .input-dependencia {

@@ -14,6 +14,7 @@ export default function ListaProductos({ onEditar }) {
     busqueda: ''
   });
   const [dependencias, setDependencias] = useState([]);
+  const [busquedaInput, setBusquedaInput] = useState('');
   const [dependenciaBusqueda, setDependenciaBusqueda] = useState('');
   const [mostrarEdicion, setMostrarEdicion] = useState(null);
   const [edicion, setEdicion] = useState({});
@@ -86,19 +87,26 @@ export default function ListaProductos({ onEditar }) {
     }
   };
 
-  const dependenciasFiltradas = dependencias.filter((dependencia) => {
-    const termino = dependenciaBusqueda.trim().toLowerCase();
-    if (!termino) return true;
-    return dependencia.nombre.toLowerCase().includes(termino) || dependencia.id.toLowerCase().includes(termino);
-  });
+  const manejarBusqueda = () => {
+    setFiltros((prev) => ({ ...prev, busqueda: busquedaInput.trim() }));
+  };
 
-  const manejarCambioDependencia = (valor) => {
-    const texto = String(valor || '').trim();
-    setDependenciaBusqueda(texto);
+  const manejarBusquedaDependencia = () => {
+    const texto = dependenciaBusqueda.trim();
+    if (!texto) {
+      setFiltros((prev) => ({ ...prev, dependencia: '' }));
+      return;
+    }
+
     const dependenciaCoincidente = dependencias.find((dependencia) =>
-      dependencia.nombre.toLowerCase() === texto.toLowerCase() || dependencia.nombre.toLowerCase().includes(texto.toLowerCase())
+      dependencia.nombre.toLowerCase().includes(texto.toLowerCase())
+      || dependencia.id.toLowerCase().includes(texto.toLowerCase())
     );
-    setFiltros((prev) => ({ ...prev, dependencia: dependenciaCoincidente ? dependenciaCoincidente.id : texto || '' }));
+
+    setFiltros((prev) => ({
+      ...prev,
+      dependencia: dependenciaCoincidente ? dependenciaCoincidente.id : texto
+    }));
   };
 
   const descargarPlantilla = async () => {
@@ -170,13 +178,19 @@ export default function ListaProductos({ onEditar }) {
       {mensajeImportacion && <div className="importador-mensaje" role="status">{mensajeImportacion}</div>}
 
       <div className="filtros-container">
-        <input
-          type="text"
-          placeholder="Buscar por nombre, modelo, serie o área..."
-          value={filtros.busqueda}
-          onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-          className="input-busqueda"
-        />
+        <div className="campo-busqueda">
+          <input
+            type="text"
+            placeholder="Buscar por nombre, modelo, serie o área..."
+            value={busquedaInput}
+            onChange={(e) => setBusquedaInput(e.target.value)}
+            className="input-busqueda"
+          />
+          <button type="button" className="btn-busqueda" onClick={manejarBusqueda} aria-label="Buscar productos">
+            <Search size={16} aria-hidden="true" />
+            <span>Buscar</span>
+          </button>
+        </div>
 
         <select
           value={filtros.categoria}
@@ -191,15 +205,19 @@ export default function ListaProductos({ onEditar }) {
           ))}
         </select>
 
-        <div className="filtro-dependencia">
+        <div className="campo-busqueda campo-dependencia">
           <input
             type="text"
             list="dependencias-list"
             placeholder="Buscar dependencia..."
             value={dependenciaBusqueda}
-            onChange={(e) => manejarCambioDependencia(e.target.value)}
+            onChange={(e) => setDependenciaBusqueda(e.target.value)}
             className="input-busqueda input-dependencia"
           />
+          <button type="button" className="btn-busqueda" onClick={manejarBusquedaDependencia} aria-label="Buscar por dependencia">
+            <Search size={16} aria-hidden="true" />
+            <span>Buscar</span>
+          </button>
           <datalist id="dependencias-list">
             {dependencias.map((dependencia) => (
               <option key={dependencia.id} value={dependencia.nombre} />

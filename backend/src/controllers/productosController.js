@@ -162,8 +162,11 @@ const aliasEncabezados = {
   nombre_elemento: 'nombre',
   nombre_del_bien: 'nombre',
   nombre_del_elemento: 'nombre',
-  descripcion_activo: 'nombre',
-  descripcion_del_activo: 'nombre',
+  descripcion_activo: 'descripcion',
+  descripcion_del_activo: 'descripcion',
+  descripcion_de_activo: 'descripcion',
+  descripcion_del_bien: 'descripcion',
+  descripcion_del_elemento: 'descripcion',
   elemento: 'nombre',
   equipo: 'nombre',
   tipo_de_activo: 'categoria',
@@ -248,6 +251,13 @@ const valorCelda = (celda) => {
     return celda.result;
   }
   return celda;
+};
+
+const truncarTexto = (valor, maxLength = 255) => {
+  if (valor === null || valor === undefined) return null;
+  const texto = String(valor).trim();
+  if (!texto) return null;
+  return texto.length > maxLength ? texto.slice(0, maxLength) : texto;
 };
 
 const normalizarNombreCategoria = (valor) => String(valor || '')
@@ -444,21 +454,21 @@ export const importarProductos = async (req, res) => {
         continue;
       }
       filas.push(filtrarCamposProducto({
-        id: uuidv4(), nombre, categoria_id: categoria,
-        marca: texto('marca') || null, modelo: texto('modelo') || null,
-        numero_serie: texto('numero_serie') || null, cantidad_total: cantidad,
-        cantidad_disponible: cantidad, unidad: texto('unidad') || null,
+        id: uuidv4(), nombre: truncarTexto(nombre, 255), categoria_id: categoria,
+        marca: truncarTexto(texto('marca'), 255) || null, modelo: truncarTexto(texto('modelo'), 255) || null,
+        numero_serie: truncarTexto(texto('numero_serie'), 255) || null, cantidad_total: cantidad,
+        cantidad_disponible: cantidad, unidad: truncarTexto(texto('unidad'), 50) || null,
         metraje_total: metrajeTotal, metraje_restante: metrajeRestante,
-        ubicacion: texto('ubicacion') || 'Almacén', estado: texto('estado') || 'nuevo',
-        dependencia_codigo: texto('dependencia_codigo') || null,
-        dependencia_nombre: texto('dependencia_nombre') || null,
-        activo_fijo: texto('activo_fijo') || null,
-        area: texto('area') || null,
+        ubicacion: truncarTexto(texto('ubicacion') || 'Almacén', 255), estado: truncarTexto(texto('estado') || 'nuevo', 50),
+        dependencia_codigo: truncarTexto(texto('dependencia_codigo'), 100) || null,
+        dependencia_nombre: truncarTexto(texto('dependencia_nombre'), 255) || null,
+        activo_fijo: truncarTexto(texto('activo_fijo'), 255) || null,
+        area: truncarTexto(texto('area'), 255) || null,
         fecha_ultimo_mantenimiento: convertirFechaOpcional(valor('fecha_ultimo_mantenimiento')),
-        estado_mantenimiento: texto('estado_mantenimiento') || null,
+        estado_mantenimiento: truncarTexto(texto('estado_mantenimiento'), 100) || null,
         aporta_plan_mejoramiento: texto('aporta_plan_mejoramiento') || null,
         fecha_adquisicion: convertirFecha(valor('fecha_adquisicion')),
-        descripcion: texto('descripcion') || null, created_at: new Date(), updated_at: new Date()
+        descripcion: truncarTexto(texto('descripcion'), 5000) || null, created_at: new Date(), updated_at: new Date()
       }, columnasDisponibles));
     }
 

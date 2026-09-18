@@ -1,3 +1,6 @@
+// Archivo maestro de Prisma para el proyecto.
+// El esquema de producción debe ser este y no duplicarse en la carpeta raíz.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,43 +11,95 @@ datasource db {
 }
 
 model usuarios {
-  id            String   @id @default(uuid()) @db.Uuid
-  email         String   @unique
-  password_hash String?
-  nombre        String?
-  role          String   @default("PERSONAL")
-  google_id     String?  @unique
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  id              String            @id @default(uuid()) @db.Uuid
+  email           String            @unique
+  password_hash   String?
+  nombre          String?
+  role            String            @default("PERSONAL")
+  google_id       String?           @unique
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  ordenes_trabajo ordenes_trabajo[]
+  reportes        reportes[]
 }
 
 model categorias {
-  id         String   @id @default(uuid()) @db.Uuid
-  nombre     String   @unique
-  created_at DateTime @default(now())
+  id         String      @id @default(uuid()) @db.Uuid
+  nombre     String      @unique
+  created_at DateTime    @default(now())
   productos  productos[]
 }
 
 model productos {
-  id                  String    @id @default(uuid()) @db.Uuid
-  nombre              String
-  categoria_id        String    @db.Uuid
-  marca               String?
-  modelo              String?
-  numero_serie        String?
-  cantidad_total      Int
-  cantidad_disponible Int
-  ubicacion           String?
-  estado              String?
-  stock_estado        String?   @default("normal")
-  fecha_adquisicion   DateTime? @db.Date
-  foto_url            String?
-  descripcion         String?
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @updatedAt
+  id                         String    @id @default(uuid()) @db.Uuid
+  nombre                     String
+  categoria_id               String    @db.Uuid
+  marca                      String?
+  modelo                     String?
+  numero_serie               String?
+  cantidad_total             Int
+  cantidad_disponible        Int
+  unidad                     String?
+  metraje_total              Int?
+  metraje_restante           Int?
+  ubicacion                  String?
+  estado                     String?
+  activo_fijo                String?
+  dependencia_codigo         String?
+  dependencia_nombre         String?
+  area                       String?
+  fecha_ultimo_mantenimiento DateTime? @db.Date
+  estado_mantenimiento       String?
+  aporta_plan_mejoramiento   String?
+  stock_estado               String?   @default("normal")
+  fecha_adquisicion          DateTime? @db.Date
+  foto_url                   String?
+  descripcion                String?
+  created_at                 DateTime  @default(now())
+  updated_at                 DateTime  @updatedAt
 
   categorias categorias @relation(fields: [categoria_id], references: [id])
-  archivos  archivos[]
+  archivos   archivos[]
+  ot_items   ot_items[]
+}
+
+model ordenes_trabajo {
+  id            String   @id @default(uuid()) @db.Uuid
+  titulo        String
+  descripcion   String?
+  secuencia     BigInt   @unique @default(autoincrement()) @db.BigInt
+  numero        String?  @unique
+  usuario_id    String   @db.Uuid
+  mantis_ticket String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  usuario usuarios   @relation(fields: [usuario_id], references: [id])
+  items   ot_items[]
+}
+
+model ot_items {
+  id                String  @id @default(uuid()) @db.Uuid
+  orden_id          String  @db.Uuid
+  producto_id       String  @db.Uuid
+  cantidad          Int
+  metraje_usado     Int?
+  cable_descripcion String?
+
+  ordenes_trabajo ordenes_trabajo @relation(fields: [orden_id], references: [id])
+  productos       productos       @relation(fields: [producto_id], references: [id])
+}
+
+model reportes {
+  id          String   @id @default(uuid()) @db.Uuid
+  tipo        String
+  titulo      String
+  descripcion String?
+  archivo_url String?
+  creado_por  String?  @db.Uuid
+  created_at  DateTime @default(now())
+
+  usuario usuarios? @relation(fields: [creado_por], references: [id])
 }
 
 model archivos {

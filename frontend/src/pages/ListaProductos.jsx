@@ -87,15 +87,21 @@ export default function ListaProductos({ onEditar }) {
 
   const descargarPlantilla = async () => {
     try {
-      const { data } = await productosAPI.descargarPlantilla();
-      const url = window.URL.createObjectURL(data);
+      const data = await productosAPI.descargarPlantilla();
+      const blob = data instanceof Blob ? data : new Blob([data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = window.URL.createObjectURL(blob);
       const enlace = document.createElement('a');
       enlace.href = url;
       enlace.download = 'plantilla_productos.xlsx';
+      document.body.appendChild(enlace);
       enlace.click();
-      window.URL.revokeObjectURL(url);
+      document.body.removeChild(enlace);
+      setTimeout(() => window.URL.revokeObjectURL(url), 2000);
     } catch (err) {
-      console.error('No se pudo descargar la plantilla: ' + err.message);
+      console.error('No se pudo descargar la plantilla: ' + (err?.message || err));
+      setMensajeImportacion('No se pudo descargar la plantilla. Verifica tu sesión e intenta nuevamente.');
     }
   };
 

@@ -30,7 +30,7 @@ export const productosAPI = {
   obtener: (params) => api.get('/productos', { params }),
   obtenerPorId: (id) => api.get(`/productos/${id}`),
   crear: (data) => api.post('/productos', data),
-  descargarPlantilla: () => api.get('/productos/plantilla', { responseType: 'blob' }),
+  descargarPlantilla: () => api.get('/productos/plantilla', { responseType: 'blob' }).then((response) => response.data),
   importar: (archivo) => {
     const formData = new FormData();
     formData.append('archivo', archivo);

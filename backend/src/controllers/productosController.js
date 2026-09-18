@@ -260,6 +260,49 @@ const truncarTexto = (valor, maxLength = 255) => {
   return texto.length > maxLength ? texto.slice(0, maxLength) : texto;
 };
 
+const limiteColumnas = {
+  nombre: 255,
+  categoria_id: 36,
+  marca: 255,
+  modelo: 255,
+  numero_serie: 255,
+  cantidad_total: null,
+  cantidad_disponible: null,
+  unidad: 50,
+  metraje_total: null,
+  metraje_restante: null,
+  ubicacion: 255,
+  estado: 50,
+  activo_fijo: 255,
+  dependencia_codigo: 100,
+  dependencia_nombre: 255,
+  area: 255,
+  fecha_ultimo_mantenimiento: null,
+  estado_mantenimiento: 100,
+  aporta_plan_mejoramiento: null,
+  stock_estado: 50,
+  fecha_adquisicion: null,
+  foto_url: null,
+  descripcion: 5000
+};
+
+const validarLongitudCamposFila = (fila, numeroFila) => {
+  const errores = [];
+
+  Object.entries(limiteColumnas).forEach(([campo, maxLength]) => {
+    if (maxLength === null || !(campo in fila) || fila[campo] === null || fila[campo] === undefined || fila[campo] === '') {
+      return;
+    }
+
+    const valor = String(fila[campo]);
+    if (valor.length > maxLength) {
+      errores.push(`Fila ${numeroFila}: campo "${campo}" excede ${maxLength} caracteres (${valor.length}).`);
+    }
+  });
+
+  return errores;
+};
+
 const normalizarNombreCategoria = (valor) => String(valor || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -432,7 +475,7 @@ export const importarProductos = async (req, res) => {
     });
 
     for (const { row, numeroFila, valor, texto } of filasAProcesar) {
-      const nombre = texto('nombre') || texto('descripcion') || texto('activo_fijo') || 'Activo sin nombre';
+      const nombre = texto('nombre') || texto('activo_fijo') || 'Activo sin nombre';
       const categoriaTexto = texto('categoria');
       let categoria = categoriasPorNombre.get(normalizarNombreCategoria(categoriaTexto))
         || (esMatrizActivos ? categoriaPredeterminada.id : null);
@@ -453,13 +496,13 @@ export const importarProductos = async (req, res) => {
         errores.push(`Fila ${numeroFila}: metraje inválido`);
         continue;
       }
-      filas.push(filtrarCamposProducto({
+      const filaProducto = {
         id: uuidv4(), nombre: truncarTexto(nombre, 255), categoria_id: categoria,
         marca: truncarTexto(texto('marca'), 255) || null, modelo: truncarTexto(texto('modelo'), 255) || null,
         numero_serie: truncarTexto(texto('numero_serie'), 255) || null, cantidad_total: cantidad,
         cantidad_disponible: cantidad, unidad: truncarTexto(texto('unidad'), 50) || null,
         metraje_total: metrajeTotal, metraje_restante: metrajeRestante,
-        ubicacion: truncarTexto(texto('ubicacion') || 'Almacén', 255), estado: truncarTexto(texto('estado') || 'nuevo', 50),
+        ubicacion: truncarTexto(texto('ubicacion'), 255) || null, estado: truncarTexto(texto('estado'), 50) || null,
         dependencia_codigo: truncarTexto(texto('dependencia_codigo'), 100) || null,
         dependencia_nombre: truncarTexto(texto('dependencia_nombre'), 255) || null,
         activo_fijo: truncarTexto(texto('activo_fijo'), 255) || null,
@@ -468,8 +511,18 @@ export const importarProductos = async (req, res) => {
         estado_mantenimiento: truncarTexto(texto('estado_mantenimiento'), 100) || null,
         aporta_plan_mejoramiento: texto('aporta_plan_mejoramiento') || null,
         fecha_adquisicion: convertirFecha(valor('fecha_adquisicion')),
-        descripcion: truncarTexto(texto('descripcion'), 5000) || null, created_at: new Date(), updated_at: new Date()
-      }, columnasDisponibles));
+        descripcion: truncarTexto(texto('descripcion'), 5000) || null,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+
+      const erroresFila = validarLongitudCamposFila(filaProducto, numeroFila);
+      if (erroresFila.length) {
+        errores.push(...erroresFila);
+        continue;
+      }
+
+      filas.push(filtrarCamposProducto(filaProducto, columnasDisponibles));
     }
 
     if (!filas.length) return res.status(400).json({ success: false, error: 'No hay filas válidas para importar', errores });

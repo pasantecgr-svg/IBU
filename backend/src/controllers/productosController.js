@@ -53,12 +53,24 @@ export const obtenerProductos = async (req, res) => {
     const { categoria, dependencia, busqueda } = req.query;
     const where = {};
     if (categoria) where.categoria_id = categoria;
-    if (dependencia) where.dependencia_codigo = dependencia;
+    if (dependencia) {
+      const textoDependencia = String(dependencia).trim();
+      if (textoDependencia) {
+        where.OR = [
+          ...(where.OR || []),
+          { dependencia_codigo: { contains: textoDependencia, mode: 'insensitive' } },
+          { dependencia_nombre: { contains: textoDependencia, mode: 'insensitive' } }
+        ];
+      }
+    }
     if (busqueda) {
       where.OR = [
+        ...(where.OR || []),
         { nombre: { contains: busqueda, mode: 'insensitive' } },
         { modelo: { contains: busqueda, mode: 'insensitive' } },
-        { numero_serie: { contains: busqueda, mode: 'insensitive' } }
+        { numero_serie: { contains: busqueda, mode: 'insensitive' } },
+        { dependencia_nombre: { contains: busqueda, mode: 'insensitive' } },
+        { area: { contains: busqueda, mode: 'insensitive' } }
       ];
     }
 

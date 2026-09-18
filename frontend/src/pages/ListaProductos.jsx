@@ -14,6 +14,7 @@ export default function ListaProductos({ onEditar }) {
     busqueda: ''
   });
   const [dependencias, setDependencias] = useState([]);
+  const [dependenciaBusqueda, setDependenciaBusqueda] = useState('');
   const [mostrarEdicion, setMostrarEdicion] = useState(null);
   const [edicion, setEdicion] = useState({});
   const [importando, setImportando] = useState(false);
@@ -83,6 +84,21 @@ export default function ListaProductos({ onEditar }) {
     } catch (err) {
       console.error('Error al actualizar cantidad: ' + err.message);
     }
+  };
+
+  const dependenciasFiltradas = dependencias.filter((dependencia) => {
+    const termino = dependenciaBusqueda.trim().toLowerCase();
+    if (!termino) return true;
+    return dependencia.nombre.toLowerCase().includes(termino) || dependencia.id.toLowerCase().includes(termino);
+  });
+
+  const manejarCambioDependencia = (valor) => {
+    const texto = String(valor || '').trim();
+    setDependenciaBusqueda(texto);
+    const dependenciaCoincidente = dependencias.find((dependencia) =>
+      dependencia.nombre.toLowerCase() === texto.toLowerCase() || dependencia.nombre.toLowerCase().includes(texto.toLowerCase())
+    );
+    setFiltros((prev) => ({ ...prev, dependencia: dependenciaCoincidente ? dependenciaCoincidente.id : texto || '' }));
   };
 
   const descargarPlantilla = async () => {
@@ -156,7 +172,7 @@ export default function ListaProductos({ onEditar }) {
       <div className="filtros-container">
         <input
           type="text"
-          placeholder="Buscar por nombre, modelo o serie..."
+          placeholder="Buscar por nombre, modelo, serie o área..."
           value={filtros.busqueda}
           onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
           className="input-busqueda"
@@ -175,33 +191,35 @@ export default function ListaProductos({ onEditar }) {
           ))}
         </select>
 
-        <select
-          value={filtros.dependencia}
-          onChange={(e) => setFiltros({ ...filtros, dependencia: e.target.value })}
-          className="select-categoria"
-        >
-          <option value="">Todas las dependencias</option>
-          {dependencias.map((dependencia) => <option key={dependencia.id} value={dependencia.id}>{dependencia.nombre}</option>)}
-        </select>
+        <div className="filtro-dependencia">
+          <input
+            type="text"
+            list="dependencias-list"
+            placeholder="Buscar dependencia..."
+            value={dependenciaBusqueda}
+            onChange={(e) => manejarCambioDependencia(e.target.value)}
+            className="input-busqueda input-dependencia"
+          />
+          <datalist id="dependencias-list">
+            {dependencias.map((dependencia) => (
+              <option key={dependencia.id} value={dependencia.nombre} />
+            ))}
+          </datalist>
+        </div>
       </div>
 
       <div className="tabla-responsiva">
         <table className="tabla-productos">
           <thead>
             <tr>
-              <th>Nombre</th>
+              <th>Producto</th>
               <th>Categoría</th>
-              <th>Área</th>
               <th>Dependencia</th>
-              <th>Mantenimiento</th>
-              <th>Plan de mejoramiento</th>
-              <th>Marca/Modelo</th>
-              <th>Total</th>
-              <th>Disponible</th>
+              <th>Stock</th>
               <th>Ubicación</th>
-                <th>Estado</th>
-                <th>Activo Fijo</th>
-                <th>Acciones</th>
+              <th>Estado</th>
+              <th>Activo fijo</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -324,47 +342,30 @@ export default function ListaProductos({ onEditar }) {
                         ) : (
                           <div className="producto-thumb placeholder" />
                         )}
-                        <strong>{producto.nombre}</strong>
+                        <div className="producto-meta">
+                          <strong>{producto.nombre || 'Sin nombre'}</strong>
+                          <small>{producto.marca || 'Sin marca'} {producto.modelo ? `· ${producto.modelo}` : ''}</small>
+                        </div>
                       </td>
                       <td>{producto.categorias?.nombre || 'N/A'}</td>
-                      <td>{producto.area || '-'}</td>
-                      <td>{producto.dependencia_nombre || 'Sin asignar'}</td>
-                      <td>{producto.estado_mantenimiento || '-'}</td>
-                      <td>{producto.aporta_plan_mejoramiento || '-'}</td>
-                      <td>{producto.marca || '-'} / {producto.modelo || '-'}</td>
-                      <td className="cantidad-total">{producto.cantidad_total}</td>
                       <td>
-                        <div className="cantidad-disponible">
-                          <button
-                            onClick={() => handleCambiarCantidad(producto.id, Math.max(0, producto.cantidad_disponible - 1))}
-                            className="btn-cantidad"
-                          >
-                            <Minus size={15} aria-hidden="true" />
-                          </button>
-                          <span className={producto.cantidad_disponible === 0 ? 'sin-stock' : ''}>
-                            {producto.cantidad_disponible}
-                          </span>
-                          <button
-                            onClick={() => handleCambiarCantidad(producto.id, Math.min(producto.cantidad_total, producto.cantidad_disponible + 1))}
-                            className="btn-cantidad"
-                          >
-                            <Plus size={15} aria-hidden="true" />
-                          </button>
+                        <span className="chip dependencia-chip">
+                          {producto.dependencia_nombre || 'Sin asignar'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="stock-bloque">
+                          <strong>{producto.cantidad_disponible}</strong>
+                          <span>/{producto.cantidad_total}</span>
                         </div>
                       </td>
                       <td>{producto.ubicacion || 'Almacén'}</td>
                       <td>
-                        <span className={`badge estado-${producto.estado}`}>
-                          {producto.estado}
+                        <span className={`badge estado-${producto.estado || 'nuevo'}`}>
+                          {producto.estado || 'nuevo'}
                         </span>
                       </td>
-                      <td>
-                        {producto.activo_fijo ? (
-                          <span>{producto.activo_fijo}</span>
-                        ) : (
-                          <span className="muted">-</span>
-                        )}
-                      </td>
+                      <td>{producto.activo_fijo || '-'}</td>
                       <td className="acciones">
                         <button
                           className="btn-accion edit"

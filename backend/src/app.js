@@ -28,16 +28,32 @@ const normalizeOrigin = (origin) => {
   }
 };
 
-const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173')
-  .split(',')
-  .map((origin) => normalizeOrigin(origin))
-  .filter(Boolean);
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://0.0.0.0:5173',
+  'http://0.0.0.0:5174',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://ibu.unibague.edu.co'
+];
+const allowedOrigins = [...new Set([
+  ...defaultAllowedOrigins,
+  ...(process.env.CORS_ORIGINS || process.env.FRONTEND_URL || '').split(',')
+    .map((origin) => normalizeOrigin(origin))
+    .filter(Boolean)
+])];
 
 // Middleware
 app.use(cors({
   origin: (origin, callback) => {
     const normalizedOrigin = normalizeOrigin(origin);
-    if (!origin || allowedOrigins.includes(normalizedOrigin)) return callback(null, true);
+    const isLocalhostOrigin = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i.test(normalizedOrigin);
+    if (!origin || allowedOrigins.includes(normalizedOrigin) || isLocalhostOrigin) {
+      return callback(null, true);
+    }
     return callback(new Error('Origen no permitido por CORS'));
   },
   credentials: true

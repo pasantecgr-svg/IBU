@@ -28,8 +28,6 @@ export default function App() {
   const [pagina, setPagina] = useState('dashboard');
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [errorLogin, setErrorLogin] = useState('');
-  const [loadingAuth, setLoadingAuth] = useState(false);
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [notificaciones, setNotificaciones] = useState([]);
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
 
@@ -70,29 +68,6 @@ export default function App() {
 
     cargarPerfil();
   }, [dispatch, token]);
-
-  const handleEmailLogin = async (event) => {
-    event.preventDefault();
-    const email = String(loginForm.email || '').trim();
-    const password = String(loginForm.password || '').trim();
-
-    if (!email || !password) {
-      setErrorLogin('Ingresa tu correo institucional y la contraseña.');
-      return;
-    }
-
-    try {
-      setLoadingAuth(true);
-      setErrorLogin('');
-      const { data } = await authAPI.login({ email, password });
-      dispatch(setSession({ token: data.token, user: data.user }));
-    } catch (error) {
-      const message = error?.response?.data?.error || 'No se pudo iniciar sesión con correo institucional';
-      setErrorLogin(message);
-    } finally {
-      setLoadingAuth(false);
-    }
-  };
 
   const toggleTheme = () => {
     dispatch(setTheme(theme === 'light' ? 'dark' : 'light'));
@@ -194,33 +169,9 @@ export default function App() {
           <div className="login-form-wrapper">
             <div className="login-form">
               <h2>Iniciar sesión</h2>
-              <p className="login-subtitle">Ingresa con tu cuenta institucional o con Google</p>
+              <p className="login-subtitle">Ingresa con tu cuenta de Google</p>
 
               {errorLogin && <div className="login-error">{errorLogin}</div>}
-
-              <form onSubmit={handleEmailLogin} className="login-email-form">
-                <input
-                  type="email"
-                  value={loginForm.email}
-                  onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
-                  placeholder="correo@unibague.edu.co"
-                  autoComplete="email"
-                  required
-                />
-                <input
-                  type="password"
-                  value={loginForm.password}
-                  onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
-                  placeholder="Contraseña"
-                  autoComplete="current-password"
-                  required
-                />
-                <button type="submit" className="login-submit" disabled={loadingAuth}>
-                  {loadingAuth ? 'Ingresando...' : 'Entrar con correo institucional'}
-                </button>
-              </form>
-
-              <div className="login-divider"><span>o</span></div>
 
               <div id="google-signin-button" className="google-signin-button" aria-label="Iniciar sesión con Google" />
             </div>

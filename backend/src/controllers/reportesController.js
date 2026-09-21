@@ -17,12 +17,18 @@ export const generarReportePDF = async (req, res) => {
       orderBy: { nombre: 'asc' }
     });
 
-    // Crear PDF
     const doc = new PDFDocument();
     const fileName = `inventario_${new Date().toISOString().split('T')[0]}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    doc.on('error', (error) => {
+      console.error('Error al generar PDF:', error);
+      if (!res.headersSent && !res.writableEnded) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
 
     doc.pipe(res);
 
@@ -109,10 +115,17 @@ export const generarReportePDF = async (req, res) => {
 
     doc.end();
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('Error al generar el reporte PDF:', error);
+    if (!res.headersSent && !res.writableEnded) {
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    if (!res.writableEnded) {
+      res.end();
+    }
   }
 };
 

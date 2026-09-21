@@ -243,99 +243,113 @@ export default function ListaProductos({ onEditar }) {
           <tbody>
             {productos.length > 0 ? (
               productos.map((producto) => (
-                <tr key={producto.id} className={`producto-row estado-${producto.estado}`}>
+                <tr key={producto.id} className={`producto-row estado-${producto.estado} ${mostrarEdicion === producto.id ? 'fila-edicion' : ''}`}>
                   {mostrarEdicion === producto.id ? (
                     <>
-                      <td>
-                        <input
-                          type="text"
-                          value={edicion.nombre || ''}
-                          onChange={(e) => setEdicion({ ...edicion, nombre: e.target.value })}
-                          className="input-edicion"
-                        />
+                      <td className="edicion-celda">
+                        <label className="edicion-label">
+                          <span>Nombre</span>
+                          <input
+                            type="text"
+                            value={edicion.nombre || ''}
+                            onChange={(e) => setEdicion({ ...edicion, nombre: e.target.value })}
+                            className="input-edicion"
+                          />
+                        </label>
                       </td>
-                      <td>{producto.categorias?.nombre}</td>
-                      <td>
-                        <input
-                          type="text"
-                          value={edicion.area || ''}
-                          onChange={(e) => setEdicion({ ...edicion, area: e.target.value })}
-                          className="input-edicion"
-                          placeholder="Área"
-                        />
+                      <td className="edicion-celda">
+                        <label className="edicion-label">
+                          <span>Categoría</span>
+                          <select
+                            value={edicion.categoria_id || ''}
+                            onChange={(e) => setEdicion({ ...edicion, categoria_id: e.target.value })}
+                            className="input-edicion"
+                          >
+                            <option value="">Sin categoría</option>
+                            {categorias.map((cat) => (
+                              <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                            ))}
+                          </select>
+                        </label>
                       </td>
-                      <td>{producto.dependencia_nombre || '-'}</td>
-                      <td>
-                        <input
-                          type="text"
-                          value={edicion.estado_mantenimiento || ''}
-                          onChange={(e) => setEdicion({ ...edicion, estado_mantenimiento: e.target.value })}
-                          className="input-edicion"
-                          placeholder="Estado mantenimiento"
-                        />
+                      <td className="edicion-celda">
+                        <label className="edicion-label">
+                          <span>Dependencia</span>
+                          <select
+                            value={edicion.dependencia_codigo || ''}
+                            onChange={(e) => {
+                              const selected = dependencias.find((item) => item.id === e.target.value);
+                              setEdicion({
+                                ...edicion,
+                                dependencia_codigo: selected?.id || '',
+                                dependencia_nombre: selected?.nombre || ''
+                              });
+                            }}
+                            className="input-edicion"
+                          >
+                            <option value="">Sin dependencia</option>
+                            {dependencias.map((dep) => (
+                              <option key={dep.id} value={dep.id}>{dep.nombre}</option>
+                            ))}
+                          </select>
+                        </label>
                       </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={edicion.aporta_plan_mejoramiento || ''}
-                          onChange={(e) => setEdicion({ ...edicion, aporta_plan_mejoramiento: e.target.value })}
-                          className="input-edicion"
-                          placeholder="Aporta al plan"
-                        />
+                      <td className="edicion-celda">
+                        <label className="edicion-label">
+                          <span>Stock</span>
+                          <div className="edicion-stock">
+                            <input
+                              type="number"
+                              value={edicion.cantidad_disponible ?? 0}
+                              onChange={(e) => setEdicion({ ...edicion, cantidad_disponible: parseInt(e.target.value) || 0 })}
+                              className="input-edicion"
+                            />
+                            <span>/</span>
+                            <input
+                              type="number"
+                              value={edicion.cantidad_total ?? 0}
+                              onChange={(e) => setEdicion({ ...edicion, cantidad_total: parseInt(e.target.value) || 0 })}
+                              className="input-edicion"
+                            />
+                          </div>
+                        </label>
                       </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={edicion.modelo || ''}
-                          onChange={(e) => setEdicion({ ...edicion, modelo: e.target.value })}
-                          className="input-edicion"
-                          placeholder="Modelo"
-                        />
+                      <td className="edicion-celda">
+                        <label className="edicion-label">
+                          <span>Ubicación</span>
+                          <input
+                            type="text"
+                            value={edicion.ubicacion || ''}
+                            onChange={(e) => setEdicion({ ...edicion, ubicacion: e.target.value })}
+                            className="input-edicion"
+                          />
+                        </label>
                       </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={edicion.cantidad_total || 0}
-                          onChange={(e) => setEdicion({ ...edicion, cantidad_total: parseInt(e.target.value) })}
-                          className="input-edicion"
-                        />
+                      <td className="edicion-celda">
+                        <label className="edicion-label">
+                          <span>Estado</span>
+                          <select
+                            value={edicion.estado || 'nuevo'}
+                            onChange={(e) => setEdicion({ ...edicion, estado: e.target.value })}
+                            className="input-edicion"
+                          >
+                            <option value="nuevo">Nuevo</option>
+                            <option value="usado">Usado</option>
+                            <option value="dañado">Dañado</option>
+                            <option value="reparacion">Reparación</option>
+                          </select>
+                        </label>
                       </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={edicion.cantidad_disponible || 0}
-                          onChange={(e) => setEdicion({ ...edicion, cantidad_disponible: parseInt(e.target.value) })}
-                          className="input-edicion"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={edicion.ubicacion || ''}
-                          onChange={(e) => setEdicion({ ...edicion, ubicacion: e.target.value })}
-                          className="input-edicion"
-                        />
-                      </td>
-                      <td>
-                        <select
-                          value={edicion.estado || ''}
-                          onChange={(e) => setEdicion({ ...edicion, estado: e.target.value })}
-                          className="input-edicion"
-                        >
-                          <option value="nuevo">Nuevo</option>
-                          <option value="usado">Usado</option>
-                          <option value="dañado">Dañado</option>
-                          <option value="reparacion">Reparación</option>
-                        </select>
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={edicion.activo_fijo || ''}
-                          onChange={(e) => setEdicion({ ...edicion, activo_fijo: e.target.value })}
-                          className="input-edicion"
-                          placeholder="Activo Fijo"
-                        />
+                      <td className="edicion-celda">
+                        <label className="edicion-label">
+                          <span>Activo fijo</span>
+                          <input
+                            type="text"
+                            value={edicion.activo_fijo || ''}
+                            onChange={(e) => setEdicion({ ...edicion, activo_fijo: e.target.value })}
+                            className="input-edicion"
+                          />
+                        </label>
                       </td>
                       <td className="acciones-edicion">
                         <button

@@ -65,11 +65,43 @@ export default function ListaProductos({ onEditar }) {
 
   const handleGuardarEdicion = async (id) => {
     try {
-      await productosAPI.actualizar(id, edicion);
+      const payload = {
+        ...edicion,
+        categoria_id: edicion.categoria_id ? Number(edicion.categoria_id) : null,
+        cantidad_total: Number(edicion.cantidad_total ?? 0),
+        cantidad_disponible: Number(edicion.cantidad_disponible ?? 0),
+        dependencia_codigo: edicion.dependencia_codigo || null,
+        dependencia_nombre: edicion.dependencia_nombre || null,
+        activo_fijo: edicion.activo_fijo || null,
+        area: edicion.area || null,
+        estado_mantenimiento: edicion.estado_mantenimiento || null,
+        aporta_plan_mejoramiento: edicion.aporta_plan_mejoramiento || null,
+        ubicacion: edicion.ubicacion || null,
+        modelo: edicion.modelo || null,
+        descripcion: edicion.descripcion || null,
+        marca: edicion.marca || null,
+        numero_serie: edicion.numero_serie || null,
+        foto_url: edicion.foto_url || null,
+        fecha_adquisicion: edicion.fecha_adquisicion || null,
+        fecha_ultimo_mantenimiento: edicion.fecha_ultimo_mantenimiento || null,
+        estado: edicion.estado || 'nuevo'
+      };
+
+      delete payload.categorias;
+      delete payload.archivos;
+      delete payload.created_at;
+      delete payload.updated_at;
+      delete payload.stock_bajo;
+      delete payload.stock_estado;
+      delete payload.stock_label;
+      delete payload.id;
+
+      await productosAPI.actualizar(id, payload);
       setMostrarEdicion(null);
       cargarDatos();
     } catch (err) {
-      console.error('Error al actualizar: ' + err.message);
+      console.error('Error al actualizar: ' + (err.response?.data?.error || err.message));
+      window.alert(err.response?.data?.error || 'No se pudo guardar el producto. Revisa los datos e intenta nuevamente.');
     }
   };
 

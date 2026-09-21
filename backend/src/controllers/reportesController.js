@@ -19,15 +19,26 @@ export const generarReportePDF = async (req, res) => {
 
     const doc = new PDFDocument();
     const fileName = `inventario_${new Date().toISOString().split('T')[0]}.pdf`;
+    let responseClosed = false;
+
+    const safeFinish = (callback) => {
+      if (!responseClosed && !res.writableEnded) {
+        responseClosed = true;
+        return callback();
+      }
+      return null;
+    };
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
+    res.on('close', () => {
+      responseClosed = true;
+    });
+
     doc.on('error', (error) => {
       console.error('Error al generar PDF:', error);
-      if (!res.headersSent && !res.writableEnded) {
-        res.status(500).json({ success: false, error: error.message });
-      }
+      safeFinish(() => res.status(500).json({ success: false, error: error.message }));
     });
 
     doc.pipe(res);
@@ -63,7 +74,27 @@ export const generarReportePDF = async (req, res) => {
 
     const getCellLines = (text, width) => {
       const safeText = String(text ?? '').trim() || '-';
-      return doc.splitTextToSize(safeText, width - 6);
+      const words = safeText.split(/\s+/);
+      const lines = [];
+      let current = '';
+
+      for (const word of words) {
+        const candidate = current ? `${current} ${word}` : word;
+        if (doc.widthOfString(candidate) <= width - 6) {
+          current = candidate;
+        } else {
+          if (current) {
+            lines.push(current);
+          }
+          current = word;
+        }
+      }
+
+      if (current) {
+        lines.push(current);
+      }
+
+      return lines.length > 0 ? lines : ['-'];
     };
 
     const renderHeader = (y) => {
@@ -123,7 +154,7 @@ export const generarReportePDF = async (req, res) => {
       });
     }
 
-    if (!res.writableEnded) {
+    if (!res.writableEnded && !res.headersSent) {
       res.end();
     }
   }

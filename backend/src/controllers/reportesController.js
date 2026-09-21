@@ -44,59 +44,57 @@ export const generarReportePDF = async (req, res) => {
     doc.moveDown(0.5);
 
     const startX = 50;
-    const pageWidth = 595.28 - startX * 2;
-    const colWidths = [120, 90, 85, 45, 60, 100];
-    const offsets = [0, colWidths[0], colWidths[0] + colWidths[1], colWidths[0] + colWidths[1] + colWidths[2], colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4]];
-    const tableEndX = startX + colWidths.reduce((sum, width) => sum + width, 0);
-    const headerY = doc.y;
-
-    doc.fontSize(9).font('Helvetica-Bold');
+    const tableWidth = 500;
+    const colWidths = [130, 100, 90, 50, 55, 75];
+    const headerY = doc.y + 4;
     const headers = ['Nombre', 'Modelo', 'Categoría', 'Total', 'Disponible', 'Ubicación'];
-    headers.forEach((header, index) => {
-      const x = startX + offsets[index];
-      doc.text(header, x, headerY, { width: colWidths[index] - 4, align: 'left' });
-    });
+    const offsets = colWidths.reduce((acc, width) => {
+      const last = acc[acc.length - 1] || 0;
+      acc.push(last + width);
+      return acc;
+    }, [0]);
+    const tableEndX = startX + tableWidth;
 
-    doc.moveTo(startX, headerY + 15).lineTo(Math.min(tableEndX, 545), headerY + 15).stroke();
-    doc.moveDown(1.2);
-
-    doc.fontSize(8).font('Helvetica');
-    const rowGap = 8;
-    const contentBottom = doc.page.height - doc.page.margins.bottom;
-
-    const drawTableRow = (row, y) => {
-      let maxLines = 1;
-      const cells = row.map((value, index) => {
-        const texto = String(value ?? '').trim() || '-';
-        const width = colWidths[index] - 6;
-        const lines = Math.max(1, Math.ceil(doc.heightOfString(texto, { width }) / 9));
-        maxLines = Math.max(maxLines, lines);
-        const x = startX + offsets[index];
-        return { x, width, texto, lines };
-      });
-
-      const cellHeight = Math.max(16, maxLines * 9 + 4);
-      if (y + cellHeight > contentBottom) {
-        doc.addPage();
-        doc.fontSize(9).font('Helvetica-Bold');
-        headers.forEach((header, index) => {
-          const x = startX + offsets[index];
-          doc.text(header, x, doc.y + 8, { width: colWidths[index] - 4, align: 'left' });
-        });
-        doc.moveTo(startX, doc.y + 22).lineTo(Math.min(tableEndX, 545), doc.y + 22).stroke();
-        doc.moveDown(1.2);
-        doc.fontSize(8).font('Helvetica');
-        return drawTableRow(row, doc.y);
-      }
-
-      cells.forEach((cell) => {
-        doc.text(cell.texto, cell.x, y, { width: cell.width, lineGap: 1.5 });
-      });
-
-      return y + cellHeight + rowGap;
+    const getCellLines = (text, width) => {
+      const safeText = String(text ?? '').trim() || '-';
+      return doc.splitTextToSize(safeText, width - 6);
     };
 
-    let currentY = doc.y;
+    const renderHeader = (y) => {
+      doc.fontSize(8).font('Helvetica-Bold');
+      headers.forEach((header, index) => {
+        const x = startX + offsets[index];
+        doc.rect(x, y, colWidths[index], 18).stroke();
+        doc.text(header, x + 3, y + 4, { width: colWidths[index] - 6, align: 'left' });
+      });
+      return y + 18;
+    };
+
+    const drawTableRow = (row, y) => {
+      const cellText = row.map((value, index) => ({
+        value,
+        width: colWidths[index],
+        x: startX + offsets[index],
+        lines: getCellLines(value, colWidths[index])
+      }));
+
+      const rowHeight = Math.max(18, ...cellText.map((cell) => cell.lines.length * 8 + 10));
+      const bottomLimit = doc.page.height - doc.page.margins.bottom;
+
+      if (y + rowHeight > bottomLimit) {
+        doc.addPage();
+        return drawTableRow(row, doc.y + 12);
+      }
+
+      cellText.forEach((cell) => {
+        doc.rect(cell.x, y, cell.width, rowHeight).stroke();
+        doc.text(cell.lines, cell.x + 3, y + 4, { width: cell.width - 6, lineGap: 1.2 });
+      });
+
+      return y + rowHeight + 6;
+    };
+
+    let currentY = renderHeader(headerY);
     productos.forEach((producto) => {
       const row = [
         producto.nombre || '',

@@ -43,33 +43,70 @@ export const generarReportePDF = async (req, res) => {
     doc.fontSize(12).font('Helvetica-Bold').text('DETALLE DE EQUIPOS');
     doc.moveDown(0.5);
 
-    // Encabezados de tabla
     const startX = 50;
-    const colWidths = [80, 100, 60, 50, 50, 70];
-    const y = doc.y;
+    const pageWidth = 595.28 - startX * 2;
+    const colWidths = [120, 90, 85, 45, 60, 100];
+    const offsets = [0, colWidths[0], colWidths[0] + colWidths[1], colWidths[0] + colWidths[1] + colWidths[2], colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4]];
+    const tableEndX = startX + colWidths.reduce((sum, width) => sum + width, 0);
+    const headerY = doc.y;
 
     doc.fontSize(9).font('Helvetica-Bold');
-    doc.text('Nombre', startX, y);
-    doc.text('Modelo', startX + colWidths[0], y);
-    doc.text('Categoría', startX + colWidths[0] + colWidths[1], y);
-    doc.text('Total', startX + colWidths[0] + colWidths[1] + colWidths[2], y);
-    doc.text('Disponible', startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], y);
-    doc.text('Ubicación', startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], y);
+    const headers = ['Nombre', 'Modelo', 'Categoría', 'Total', 'Disponible', 'Ubicación'];
+    headers.forEach((header, index) => {
+      const x = startX + offsets[index];
+      doc.text(header, x, headerY, { width: colWidths[index] - 4, align: 'left' });
+    });
 
-    doc.moveTo(startX, y + 15).lineTo(550, y + 15).stroke();
-    doc.moveDown();
+    doc.moveTo(startX, headerY + 15).lineTo(Math.min(tableEndX, 545), headerY + 15).stroke();
+    doc.moveDown(1.2);
 
-    // Filas
     doc.fontSize(8).font('Helvetica');
+    const rowGap = 8;
+    const contentBottom = doc.page.height - doc.page.margins.bottom;
+
+    const drawTableRow = (row, y) => {
+      let maxLines = 1;
+      const cells = row.map((value, index) => {
+        const texto = String(value ?? '').trim() || '-';
+        const width = colWidths[index] - 6;
+        const lines = Math.max(1, Math.ceil(doc.heightOfString(texto, { width }) / 9));
+        maxLines = Math.max(maxLines, lines);
+        const x = startX + offsets[index];
+        return { x, width, texto, lines };
+      });
+
+      const cellHeight = Math.max(16, maxLines * 9 + 4);
+      if (y + cellHeight > contentBottom) {
+        doc.addPage();
+        doc.fontSize(9).font('Helvetica-Bold');
+        headers.forEach((header, index) => {
+          const x = startX + offsets[index];
+          doc.text(header, x, doc.y + 8, { width: colWidths[index] - 4, align: 'left' });
+        });
+        doc.moveTo(startX, doc.y + 22).lineTo(Math.min(tableEndX, 545), doc.y + 22).stroke();
+        doc.moveDown(1.2);
+        doc.fontSize(8).font('Helvetica');
+        return drawTableRow(row, doc.y);
+      }
+
+      cells.forEach((cell) => {
+        doc.text(cell.texto, cell.x, y, { width: cell.width, lineGap: 1.5 });
+      });
+
+      return y + cellHeight + rowGap;
+    };
+
+    let currentY = doc.y;
     productos.forEach((producto) => {
-      const currentY = doc.y;
-      doc.text(producto.nombre || '', startX, currentY, { width: colWidths[0] - 5 });
-      doc.text(producto.modelo || '', startX + colWidths[0], currentY, { width: colWidths[1] - 5 });
-      doc.text(producto.categorias?.nombre || '', startX + colWidths[0] + colWidths[1], currentY, { width: colWidths[2] - 5 });
-      doc.text(producto.cantidad_total.toString(), startX + colWidths[0] + colWidths[1] + colWidths[2], currentY);
-      doc.text(producto.cantidad_disponible.toString(), startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], currentY);
-      doc.text(producto.ubicacion || '', startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], currentY, { width: colWidths[5] - 5 });
-      doc.moveDown();
+      const row = [
+        producto.nombre || '',
+        producto.modelo || '',
+        producto.categorias?.nombre || '',
+        String(producto.cantidad_total ?? 0),
+        String(producto.cantidad_disponible ?? 0),
+        producto.ubicacion || ''
+      ];
+      currentY = drawTableRow(row, currentY);
     });
 
     doc.end();

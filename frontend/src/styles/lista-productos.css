@@ -116,46 +116,56 @@
 
 /* Filtros */
 .filtros-container {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(240px, 1.6fr) minmax(180px, 0.9fr) minmax(220px, 1.1fr);
   gap: 15px;
   margin-bottom: 25px;
-  flex-wrap: wrap;
+  align-items: stretch;
 }
 
 .campo-busqueda {
   display: flex;
   align-items: center;
-  min-width: 220px;
-  flex: 1;
+  min-height: 46px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 8px;
   overflow: hidden;
   background: white;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .campo-dependencia {
-  max-width: 340px;
+  max-width: none;
 }
 
 .input-busqueda,
 .select-categoria {
   padding: 12px 15px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 8px;
   font-size: 14px;
   background-color: white;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .input-busqueda {
   flex: 1;
-  min-width: 180px;
+  min-width: 0;
   border: none;
   border-radius: 0;
   background: transparent;
 }
 
+.input-busqueda:focus,
+.select-categoria:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 61, 124, 0.12);
+}
+
 .select-categoria {
   min-width: 180px;
+  width: 100%;
 }
 
 .btn-busqueda {
@@ -163,21 +173,22 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-width: 100px;
-  height: 42px;
-  padding: 0 14px;
+  min-width: 110px;
+  height: 46px;
+  padding: 0 16px;
   border: none;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid rgba(255,255,255,0.2);
   background: var(--primary);
   color: white;
   cursor: pointer;
-  transition: filter 0.2s ease;
+  transition: filter 0.2s ease, transform 0.2s ease;
   font-size: 13px;
   font-weight: 700;
 }
 
 .btn-busqueda:hover {
   filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 .input-dependencia {
@@ -196,8 +207,9 @@
 .tabla-responsiva {
   overflow-x: auto;
   margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: var(--shadow);
+  border-radius: 10px;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .producto-nombre {
@@ -479,13 +491,18 @@
   .carga-rollos-form { grid-template-columns: 1fr; }
   .carga-rollos-form > .btn-primary { width: 100%; }
   .filtros-container {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
+  .campo-busqueda,
   .input-busqueda,
   .select-categoria {
     width: 100%;
     min-width: auto;
+  }
+
+  .btn-busqueda {
+    min-width: 92px;
   }
 
   .tabla-productos th,

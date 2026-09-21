@@ -159,6 +159,9 @@ export default function App() {
   }, [dispatch]);
 
   if (!token || !usuario) {
+    const googleClientId = getGoogleClientId();
+    const googleConfigured = Boolean(googleClientId) && !isGoogleClientPlaceholder(googleClientId);
+
     return (
       <div className="login-shell">
         <div className="login-card">
@@ -172,6 +175,11 @@ export default function App() {
               <p className="login-subtitle">Ingresa con tu cuenta de Google</p>
 
               {errorLogin && <div className="login-error">{errorLogin}</div>}
+              {!googleConfigured && (
+                <div className="login-error">
+                  Google no está configurado en este entorno. Revisa la variable VITE_GOOGLE_CLIENT_ID.
+                </div>
+              )}
 
               <div id="google-signin-button" className="google-signin-button" aria-label="Iniciar sesión con Google" />
             </div>

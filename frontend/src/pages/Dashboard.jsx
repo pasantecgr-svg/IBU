@@ -58,60 +58,49 @@ export default function Dashboard() {
     }
   };
 
+  const descargarBlob = (blob, filename) => {
+    if (!blob || !(blob instanceof Blob) || blob.size === 0) {
+      throw new Error('El servidor no devolvió un archivo válido para descargar.');
+    }
+
+    const url = window.URL.createObjectURL(blob);
+    const isiOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+    if (isiOS) {
+      const newTab = window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+      if (!newTab) {
+        console.warn('No se pudo abrir el archivo en nueva pestaña. Revisa bloqueadores o permisos.');
+      }
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+  };
+
   const descargarPDF = async () => {
     try {
       const blob = await reportesAPI.generarPDF();
-      const url = window.URL.createObjectURL(blob);
-      const filename = `inventario_${new Date().toISOString().split('T')[0]}.pdf`;
-
-      // En iOS/Safari a veces no funciona el atributo download; abrimos en nueva pestaña.
-      const isiOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-      if (isiOS) {
-        const newTab = window.open(url);
-        // Revoke después de un tiempo para no invalidar la descarga prematuramente
-        setTimeout(() => window.URL.revokeObjectURL(url), 5000);
-        if (!newTab) {
-          console.warn('No se pudo abrir el PDF en nueva pestaña. Revisa bloqueadores o permisos.');
-        }
-      } else {
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        // Dejar un margen para que el navegador inicie la descarga antes de revocar
-        setTimeout(() => window.URL.revokeObjectURL(url), 2000);
-      }
+      descargarBlob(blob, `inventario_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (err) {
-      console.error('Error al descargar PDF: ' + err.message);
+      console.error('Error al descargar PDF: ' + (err?.message || err));
+      alert(err?.message || 'No se pudo descargar el PDF.');
     }
   };
 
   const descargarExcel = async () => {
     try {
       const blob = await reportesAPI.generarExcel();
-      const url = window.URL.createObjectURL(blob);
-      const filename = `inventario_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-      const isiOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-      if (isiOS) {
-        const newTab = window.open(url);
-        setTimeout(() => window.URL.revokeObjectURL(url), 5000);
-        if (!newTab) {
-          console.warn('No se pudo abrir el archivo en nueva pestaña. Revisa bloqueadores o permisos.');
-        }
-      } else {
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => window.URL.revokeObjectURL(url), 2000);
-      }
+      descargarBlob(blob, `inventario_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (err) {
-      console.error('Error al descargar Excel: ' + err.message);
+      console.error('Error al descargar Excel: ' + (err?.message || err));
+      alert(err?.message || 'No se pudo descargar el archivo Excel.');
     }
   };
 

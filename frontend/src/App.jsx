@@ -193,10 +193,18 @@ export default function App() {
     <div className="app">
       <nav className="navbar">
         <div className="nav-container">
-          <div className="nav-brand">
+          <button
+            type="button"
+            className="nav-brand"
+            onClick={() => {
+              navegarA('dashboard');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            aria-label="Volver al inicio"
+          >
             <img src="/ibu-logo.png" alt="Logo IBU" className="brand-logo" />
             <span>IBU</span>
-          </div>
+          </button>
 
           <ul className="nav-menu">
             <>
